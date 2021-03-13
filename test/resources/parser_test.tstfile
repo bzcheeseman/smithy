@@ -1,0 +1,15 @@
+struct mystruct {
+  let myvar = 0.123;
+  let afloat: f32 = 11.23;
+  let other = 0x123;
+  let map = (key:value, k2:v2);
+  let emptyMap = ();
+  let array = [value];
+  let emptyArray = [];
+  // this is a comment
+  let string: str = [{
+    hello there my friend!
+    int x = 42;
+    {}
+  }];
+};

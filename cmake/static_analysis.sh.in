@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+pushd ..
+mkdir -p static-analysis-build && cd static-analysis-build
+@CLANG_ANALYZER@ "@CMAKE_COMMAND@" @CMAKE_SOURCE_DIR@ -G @CMAKE_GENERATOR@ -DCMAKE_C_COMPILER=@CMAKE_C_COMPILER@ -DJANSSON_BUILD_DOCS=OFF -DJANSSON_EXAMPLES=OFF
+@CLANG_ANALYZER@ "@CMAKE_BUILD_TOOL@"
+popd

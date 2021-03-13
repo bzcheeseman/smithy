@@ -1,0 +1,10 @@
+let hello = 5
+let goodbye = 0.3
+// this is a comment
+"this is a string literal"
+let myint = -5
+let myfloat = -11.324
+let negative_hex = -0x23
+let map = (key:value)
+let array = [value]
+let codeblock = [{this is some code}]
