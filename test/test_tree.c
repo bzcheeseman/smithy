@@ -157,5 +157,5 @@ int main() {
   simple_reverse_preorder();
   simple_inorder();
   simple_reverse_inorder();
-  sm_itree_free(&simple_tree[0], NULL);
+  sm_itree_cleanup(&simple_tree[0], NULL);
 }

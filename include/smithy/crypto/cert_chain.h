@@ -23,7 +23,7 @@
 
 #include <bearssl.h>
 
-// The contents of this structure shall be considered opaque
+/// The contents of this structure shall be considered opaque
 typedef struct {
   br_x509_minimal_context ctx;
 } sm_certificate_chain;
@@ -39,17 +39,21 @@ typedef struct {
  */
 void sm_certificate_chain_init(sm_certificate_chain *chain, sm_trust_store *t,
                                const char *server_name);
-/// Cleans up the chain
+/// Cleans up the chain.
 void sm_certificate_chain_cleanup(const sm_certificate_chain *chain);
 
-// Add certificate to chain, notify finished
+/// Add the given certificate to the chain. The PEM version may return false if
+/// PEM decoding failed.
 bool sm_add_pem_certificate_to_chain(sm_certificate_chain *chain,
                                      const sm_buffer pem);
 void sm_add_der_certificate_to_chain(sm_certificate_chain *chain,
                                      const sm_buffer der);
+
+/// Finish the certificate chain. This runs verification on the chain to ensure
+/// the chain is valid. Returns true on success.
 bool sm_finish_certificate_chain(sm_certificate_chain *chain);
 
-// Get the end-entity public key. Only works if sm_finish_certificate_chain
-// returns true.
+/// Get the end-entity public key. `sm_finish_certificate_chain` must have
+/// returned true for this to succeed.
 const br_x509_pkey *sm_get_end_entity_key(const sm_certificate_chain *chain,
                                           unsigned *usage);

@@ -29,6 +29,7 @@ typedef enum {
 // Args are ctx, format, args. It MUST be able to handle an empty va_list.
 typedef void (*log_fn)(void *, const char *, va_list);
 
+/// Set the log function and log context variables.
 void set_log_fn(log_fn fn);
 void set_log_ctx(void *ctx);
 

@@ -77,8 +77,8 @@ void sm_memmove(void *dst, const void *src, size_t n) {
     for (size_t i = 0; i < end;) {
 #if __has_builtin(__builtin_memcpy_inline)
       // Have to use tmp buffer here because otherwise we might overwrite
-      __builtin_memcpy_inline(&tmp[0], &src_iter[i], MEMCPY_INCREMENT, 1);
-      __builtin_memcpy_inline(&dst_iter[i], &tmp[0], MEMCPY_INCREMENT, 1);
+      __builtin_memcpy_inline(&tmp[0], &src_iter[i], MEMCPY_INCREMENT);
+      __builtin_memcpy_inline(&dst_iter[i], &tmp[0], MEMCPY_INCREMENT);
 #else
       for (size_t j = 0; j < MEMCPY_INCREMENT; ++j) {
         dst_iter[i + j] = src_iter[i + j];
@@ -96,8 +96,8 @@ void sm_memmove(void *dst, const void *src, size_t n) {
     for (int64_t i = n - MEMCPY_INCREMENT; i >= begin;) {
 #if __has_builtin(__builtin_memcpy_inline)
       // Have to use tmp buffer here because otherwise we might overwrite
-      __builtin_memcpy_inline(&tmp[0], &src_iter[i], MEMCPY_INCREMENT, 1);
-      __builtin_memcpy_inline(&dst_iter[i], &tmp[0], MEMCPY_INCREMENT, 1);
+      __builtin_memcpy_inline(&tmp[0], &src_iter[i], MEMCPY_INCREMENT);
+      __builtin_memcpy_inline(&dst_iter[i], &tmp[0], MEMCPY_INCREMENT);
 #else
       for (int64_t j = MEMCPY_INCREMENT - 1; j >= 0; --j) {
         dst_iter[i + j] = src_iter[i + j];

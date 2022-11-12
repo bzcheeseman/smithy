@@ -24,14 +24,8 @@ typedef enum {
   SM_B64_ENCODING_END = 0x4,
 } sm_b64_encoding;
 
-/**
- * Provides constant-time b64 encoding and decoding.
- *
- * @param enc Encoding to use
- * @param src Source buffer (for encoding, this is the binary buffer, for
- * decoding, this is the b64 buffer)
- * @param dst Destination buffer, opposite of source buffer
- * @return true for success, false for failure
- */
+/// Provides constant-time b64 encoding and decoding. Given an encoding, a
+/// source, and destination buffer, either b64 encode or b64 decode `src` and
+/// place the result in `dst`. Returns true on success and false on failure.
 bool sm_b64_encode(sm_b64_encoding enc, const sm_buffer src, sm_buffer *dst);
 bool sm_b64_decode(sm_b64_encoding enc, const sm_buffer src, sm_buffer *dst);

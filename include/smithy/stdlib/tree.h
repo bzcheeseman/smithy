@@ -20,9 +20,6 @@
 #include "smithy/stdlib/typed_vector.h"
 #include <stddef.h>
 
-// If the stored boolean is true, the current node is owned. This means that
-// the types stored with an sm_ilist must be at least 2 byte aligned.
-
 // The simplest way to use this object is to take advantage of the C feature
 // that you can cast a struct pointer to a pointer to its first member. That
 // means that given:
@@ -42,12 +39,19 @@ typedef struct sm_itree_ {
 #define sm_empty_itree                                                         \
   (sm_itree) { .parent = NULL, .children = sm_empty_buffer }
 
+/// Initialize a tree with a given root.
 void sm_itree_init(sm_itree *root);
-void sm_itree_free(sm_itree *root, void free_cb(void *));
+/// Clean up a tree with the given free callback. The callback will be provided
+/// the pointer to the child. Traverses the tree in post-order to free nodes.
+void sm_itree_cleanup(sm_itree *root, void free_cb(void *));
+/// `add_child` adds the given child to the parent node. It sets the ownership
+/// bit to false.
 bool sm_itree_add_child(sm_itree *parent, sm_itree *child);
+/// `take_child` adds the given child to the parent node and sets the ownership
+/// bit. The child will be freed when the parent is freed.
 bool sm_itree_take_child(sm_itree *parent, sm_itree *child);
 
-// Algorithms on the tree start here
+/// Get the root of the tree.
 sm_itree *sm_itree_get_root(sm_itree *node);
 
 typedef enum {
@@ -59,10 +63,10 @@ typedef enum {
   SM_REVERSE_INORDER,
 } sm_itree_traversal;
 
-// The foreach function takes a user-provided context and the node. Return true
-// to continue, false to stop iteration.
+/// The foreach function takes a user-provided context and the node. Return true
+/// to continue, false to stop iteration.
 typedef bool (*sm_itree_foreach_fn)(void *, sm_itree *);
-// This function can take any node as the root of the traversal. It only
-// traverses the subtree of that node.
+/// This function can take any node as the root of the traversal. It only
+/// traverses the subtree of that node.
 void sm_itree_traverse(sm_itree *node, sm_itree_traversal traversal,
                        sm_itree_foreach_fn f, void *ctx);

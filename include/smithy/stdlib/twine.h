@@ -19,11 +19,11 @@
 #include "smithy/stdlib/buffer.h"
 #include "smithy/stdlib/linked_list.h"
 
-// Similar in feeling to llvm::Twine c.f.
-// https://llvm.org/doxygen/Twine_8h_source.html but different in that this is a
-// linked-list rather than a binary tree. Most twines built from this ended up
-// being basically linked lists in a binary tree data structure, so I decided to
-// just use a linked list instead.
+/// Similar in feeling to llvm::Twine c.f.
+/// https://llvm.org/doxygen/Twine_8h_source.html but different in that this is
+/// a linked-list rather than a binary tree. Most twines built from this ended
+/// up being basically linked lists in a binary tree data structure, so I
+/// decided to just use a linked list instead.
 
 typedef struct {
   sm_ilist list_;
@@ -36,6 +36,7 @@ static inline void free_sm_twine(const sm_twine *t) {
   }
 }
 
+/// Check if the twine is empty.
 static inline bool sm_twine_is_empty(const sm_twine t) {
   return sm_ilist_next((sm_ilist *)&t) == NULL && sm_buffer_empty(t.data);
 }
@@ -46,9 +47,11 @@ static inline bool sm_twine_is_empty(const sm_twine t) {
 #define sm_twine_alias_buffer(buf)                                             \
   (sm_twine) { .list_ = sm_empty_ilist, .data = (buf) }
 
-// NOTE: be careful, this is the same complexity as sm_ilist_push_back. Try to
-// use this on a pointer to the last twine element. The function returns the
-// last twine element, properly emplaced.
+/// Append a twine to another twine. NOTE: be careful, this is the same
+/// complexity as sm_ilist_push_back. Try to use this on a pointer to the last
+/// twine element. The function returns the last twine element, properly
+/// emplaced.
 sm_twine *sm_twine_append(sm_twine *t, sm_twine *elt);
 
+/// Concat the elements of the twine into `dest`.
 void sm_twine_render(const sm_twine t, sm_buffer *dest);

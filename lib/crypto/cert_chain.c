@@ -140,13 +140,7 @@ bool sm_add_pem_certificate_to_chain(sm_certificate_chain *chain,
     return false;
   }
 
-  const br_x509_class **x509 = (void *)&chain->ctx;
-
-  // Add the certificate to the x509 validator
-  (*x509)->start_cert(x509, sm_buffer_length(der_buf));
-  (*x509)->append(x509, sm_buffer_begin(der_buf), sm_buffer_length(der_buf));
-  (*x509)->end_cert(x509);
-
+  sm_add_der_certificate_to_chain(chain, der_buf);
   return true;
 }
 

@@ -18,22 +18,35 @@
 
 #include "smithy/stdlib/hash_table.h"
 
-// Implements a write-through cache that may or may not have a filesystem
-// backing
+/// Implements a write-through cache that may or may not have a filesystem
+/// backing.
+///
+/// This struct should be treated as opaque.
 typedef struct {
   sm_hash_table hot;
   char *path;
 } sm_cache;
 
-void sm_cache_init(sm_cache *c);
+/// Initialize the cache. If `path` is NULL then the cache is set up without a
+/// filesystem backing.
+void sm_cache_init(sm_cache *c, const char *path);
+/// Clean up the cache. This does not remove the data from the filesystem if any
+/// was generated.
 void sm_cache_cleanup(sm_cache *c);
 
-void sm_cache_set_dir(sm_cache *c, const char *path);
-void sm_cache_set_nodir(sm_cache *c);
-
+/// Put a buffer into the cache at `key`. This will overwrite any data already
+/// in the cache at that key.
 void sm_cache_put(sm_cache *c, const char *key, const sm_buffer data);
+
+/// Get data from the cache at `key`. Returns true if the key was found, false
+/// if the data was not found. If no data is found, `out` is unmodified.
 bool sm_cache_get(sm_cache *c, const char *key, sm_buffer *out);
-// Checks if a given key exists
+
+/// Check if a given key exists.
 bool sm_cache_exists(sm_cache *c, const char *key);
+
+/// Remove a given key from the cache.
 void sm_cache_remove(sm_cache *c, const char *key);
+
+/// Remove all data from the cache.
 void sm_cache_clear(sm_cache *c);

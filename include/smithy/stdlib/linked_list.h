@@ -32,8 +32,9 @@
 // You should be able to use
 //    sm_list_<>(&f)
 
+/// Provides an intrusive pointer singly-linked list with a notion of ownership.
 typedef struct sm_ilist_ {
-  // if the stored boolean is true, the current node is owned. This means that
+  // If the stored boolean is true, the current node is owned. This means that
   // the types stored with an sm_ilist must be at least 2 byte aligned. This is
   // guaranteed because the alignment of this struct is 8 bytes, and therefore
   // any struct that embeds this one must be at least 8 bytes.
@@ -50,33 +51,37 @@ typedef struct sm_ilist_ {
           ((iter)) = (typeof(iter))sm_ptr_u1_pair_get_ptr(                     \
               ((sm_ilist *)(iter))->next)) _Pragma("clang diagnostic pop")
 
-// Iterate the whole list and just clean it up
+/// Iterate the whole list and just clean it up
 void sm_ilist_free(sm_ilist *l, void free_cb(void *));
 
+/// Get the next sm_ilist pointer.
 static inline sm_ilist *sm_ilist_next(sm_ilist *l) {
   return sm_ptr_u1_pair_get_ptr(l->next);
 }
 
+/// Have the list take ownership of the current sm_ilist node.
 static inline sm_ilist *sm_ilist_take(sm_ilist *l) {
   // Just set the ownership bit
   sm_ptr_u1_pair_set_int(&l->next, 1);
   return l;
 }
 
-// NOTE: push_* API does not take ownership of list item, while take_* API does.
-// If the list has ownership of the element, it can be freed with sm_ilist_free.
+/// NOTE: push_* API does not take ownership of list item, while take_* API
+/// does. If the list has ownership of the element, it can be freed with
+/// sm_ilist_free.
 
-// Push an item onto the front of the linked list. O(1) and assumes l is the
-// head of the list.
+/// Push an item onto the front of the linked list. O(1) and assumes l is the
+/// head of the list.
 void sm_ilist_push_front(sm_ilist *l, sm_ilist *elt);
 void sm_ilist_take_front(sm_ilist *l, sm_ilist *elt);
 
-// NOTE: This takes O(end - l) where end is the last element in the list
+/// NOTE: This takes O(end - l) where end is the last element in the list
 void sm_ilist_push_back(sm_ilist *l, sm_ilist *elt);
 void sm_ilist_take_back(sm_ilist *l, sm_ilist *elt);
 
-// To get the element at the front of the list, just take the front ptr
-// Get the element at the back of the list
+/// To get the element at the front of the list, just take the front ptr
+/// Get the element at the back of the list
 void sm_ilist_back(sm_ilist *l, sm_ilist **elt);
 
+/// Get the length of the list. This is O(N), be careful.
 size_t sm_ilist_length(const sm_ilist *l);

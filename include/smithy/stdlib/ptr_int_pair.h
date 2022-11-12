@@ -16,12 +16,12 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
-// Not quite as good as LLVM's pointerintpair because we don't have templates,
-// so they can't be nested. We also can't do as much checking, so it's up to the
-// user to know how many bits they can use.
+/// Not quite as good as LLVM's pointerintpair because we don't have templates,
+/// so they can't be nested. We also can't do as much checking, so it's up to
+/// the user to know how many bits they can use.
 #define SM_PTR_INT_PAIR(bits)                                                  \
   struct ptr_int_pair_##bits {                                                 \
     uintptr_t value;                                                           \
@@ -62,12 +62,15 @@ typedef uintptr_t sm_ptr_int_pair;
     return SM_PAIR_GET_INT(pair, (bits));                                      \
   }
 
+/// Defines the ptr_u1_int_pair.
 SM_DEFINE_PTR_INT_PAIR(1, bool)
 
-#define sm_ptr_u1_pair_true(val)                                             \
+#define sm_ptr_u1_pair_true(val)                                               \
   (sm_ptr_u1_pair) { .value = (uintptr_t)(val) | (uintptr_t)1 }
-#define sm_ptr_u1_pair_false(val)                                            \
+#define sm_ptr_u1_pair_false(val)                                              \
   (sm_ptr_u1_pair) { .value = (uintptr_t)(val) | (uintptr_t)0 }
 
+/// Defines the ptr_u12_int_pair.
 SM_DEFINE_PTR_INT_PAIR(12, uint16_t)
-#define sm_ptr_u12_pair_null (sm_ptr_u12_pair) { .value = (uintptr_t)NULL }
+#define sm_ptr_u12_pair_null                                                   \
+  (sm_ptr_u12_pair) { .value = (uintptr_t)NULL }

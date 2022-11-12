@@ -273,7 +273,7 @@ static bool itree_free_foreach_fn(void *ctx, sm_ptr_u1_pair node) {
   return true;
 }
 
-void sm_itree_free(sm_itree *root, void free_cb(void *)) {
+void sm_itree_cleanup(sm_itree *root, void free_cb(void *)) {
   if (root == NULL) {
     return;
   }

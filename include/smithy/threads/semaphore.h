@@ -30,6 +30,7 @@ typedef struct {
 #define SEM_FAILED NULL
 #endif
 
+/// Smithy semaphore API.
 sm_semaphore *sm_semaphore_open(int32_t value);
 int sm_semaphore_close(sm_semaphore *sem);
 int sm_semaphore_wait(sm_semaphore *sem);

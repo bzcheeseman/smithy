@@ -25,6 +25,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/// Provides a vtable for the signing engine. Because much of the functionality
+/// is duplicated between the various algorithms, the vtable allows us to
+/// abstract over those details.
 typedef struct sm_sign_engine_ sm_sign_engine;
 struct sm_sign_engine_ {
   size_t context_size;
@@ -56,13 +59,19 @@ typedef union {
   sm_ec_sign_ctx_ ec;
 } sm_sign_ctx;
 
+/// Initializers for signing contexts. These must be specific to the signing
+/// algorithm because this initializes the vtable.
 void sm_rs256_sign_init(sm_sign_ctx *ctx);
 void sm_es256_sign_init(sm_sign_ctx *ctx);
 
+/// Get the algorithm used by the signing engine.
 sm_sign_algorithm sm_sign_engine_get_alg(const sm_sign_ctx *ctx);
+/// Load the given private key into the sign context.
 void sm_sign_engine_load_privkey(const sm_sign_ctx *ctx, const sm_buffer key);
+/// Sign `in` and place the signature into `sig`.
 bool sm_sign_engine_sign(const sm_sign_ctx *ctx, const sm_buffer in,
                          sm_buffer *sig);
+/// Clean up the sign engine. This frees any internal state.
 void sm_sign_engine_cleanup(const sm_sign_ctx *ctx);
 
 /// Needed for SM_AUTO macro

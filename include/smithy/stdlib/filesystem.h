@@ -38,12 +38,16 @@ struct sm_file_ {
   uint64_t handle;
 };
 
+/// Open a file at `path` with `mode`.
 sm_file *sm_open(const char *path, const char *mode);
+/// Close the file.
 void sm_close(sm_file *f);
 
+/// sm_file aliases for stderr/stdout.
 sm_file *sm_stderr();
 sm_file *sm_stdout();
 
+/// Needed for SM_AUTO macro - close the file rather than freeing though.
 static inline void free_sm_file(sm_file **f) {
   if (f) {
     sm_close(*f);

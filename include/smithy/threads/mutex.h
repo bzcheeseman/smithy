@@ -24,6 +24,7 @@ typedef pthread_mutex_t sm_mutex;
 typedef atomic_flag sm_mutex;
 #endif
 
+/// Smithy mutex API.
 int sm_mutex_init(sm_mutex *mutex);
 int sm_mutex_destroy(sm_mutex *mutex);
 int sm_mutex_lock(sm_mutex *mutex);

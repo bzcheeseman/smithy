@@ -23,17 +23,7 @@
 #include <stdio.h>
 #include <sys/stat.h>
 
-void sm_cache_init(sm_cache *c) {
-  sm_hash_table_init(&c->hot);
-  c->path = NULL;
-}
-
-void sm_cache_cleanup(sm_cache *c) {
-  sm_hash_table_cleanup(&c->hot);
-  sm_free(c->path);
-}
-
-void sm_cache_set_dir(sm_cache *c, const char *path) {
+static void sm_cache_set_dir(sm_cache *c, const char *path) {
   c->path = sm_calloc(strlen(path) + 1, sizeof(char));
   memcpy(c->path, path, strlen(path));
 
@@ -52,12 +42,22 @@ void sm_cache_set_dir(sm_cache *c, const char *path) {
   }
 }
 
-void sm_cache_set_nodir(sm_cache *c) {
+static void sm_cache_set_nodir(sm_cache *c) {
   c->path = sm_malloc(2);
   // No directory is indicated by a single -1 byte, followed by a null
   // temrinator
   *c->path++ = -1;
   *c->path = 0;
+}
+
+void sm_cache_init(sm_cache *c, const char *path) {
+  sm_hash_table_init(&c->hot);
+  path == NULL ? sm_cache_set_nodir(c) : sm_cache_set_dir(c, path);
+}
+
+void sm_cache_cleanup(sm_cache *c) {
+  sm_hash_table_cleanup(&c->hot);
+  sm_free(c->path);
 }
 
 //===--------------------------===//

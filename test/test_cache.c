@@ -14,13 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "smithy/stdlib/buffer.h"
 #include "smithy/cache/cache.h"
+#include "smithy/stdlib/buffer.h"
 
 int main() {
   sm_cache table;
-  sm_cache_init(&table);
-  sm_cache_set_dir(&table, "/private/tmp/smithy_cache_test");
+  sm_cache_init(&table, "/private/tmp/smithy_cache_test");
 
   SM_AUTO(sm_buffer) test_buf = sm_empty_buffer;
   SM_ASSERT(sm_buffer_empty(test_buf));

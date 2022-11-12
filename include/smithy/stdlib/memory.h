@@ -18,6 +18,8 @@
 
 #include <stddef.h>
 
+/// Standard libc memset/memcpy/memmove provided here to reduce dependence on
+/// libc.
 void sm_memset(void *ptr, unsigned char c, size_t n);
 void sm_memcpy(void *dst, const void *src, size_t n);
 void sm_memmove(void *dst, const void *src, size_t n);

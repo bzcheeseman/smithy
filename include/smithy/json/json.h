@@ -20,4 +20,5 @@
 
 #include "smithy/stdlib/buffer.h"
 
+/// Helper to allow sm_buffer to be ingested into JSON form more easily.
 json_t *json_buffer(const sm_buffer buf);

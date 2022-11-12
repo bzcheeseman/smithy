@@ -18,6 +18,8 @@
 
 #include "smithy/stdlib/buffer.h"
 
+/// Provides helpers to alias a sm_buffer to a typed vector.
+
 #define sm_typed_vector_alias(arr, len)                                        \
   sm_buffer_alias((uint8_t *)(arr), (len) * sizeof(*(arr)))
 

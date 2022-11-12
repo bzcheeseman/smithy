@@ -21,11 +21,17 @@
 
 #include <bearssl.h>
 
+/// A trust store serves as the base for all certificate chains. If a chain is
+/// not anchored in a trust store, then the chain is not trusted even if it has
+/// been constructed correctly.
+///
+/// This struct shall be treated as opaque.
 typedef struct {
   br_x509_trust_anchor *anchors;
   size_t num_anchors;
 } sm_trust_store;
 
+/// Lifetime management for a trust store.
 void sm_trust_store_init(sm_trust_store *t);
 void sm_trust_store_cleanup(sm_trust_store *t);
 

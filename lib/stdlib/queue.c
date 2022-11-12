@@ -67,7 +67,7 @@ static size_t fs_queue_element_size(sm_fixed_size_queue *q) {
 }
 
 static void fs_queue_cleanup(sm_fixed_size_queue *q) {
-  free_sm_circular_buffer(&q->buf);
+  sm_circular_buffer_cleanup(&q->buf);
 }
 
 static bool fs_queue_empty(sm_fixed_size_queue *q) {

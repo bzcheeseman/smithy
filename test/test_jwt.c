@@ -23,7 +23,7 @@
 void ec() {
   SM_INFO("Testing ES256...\n");
   SM_AUTO(sm_token) token;
-  init_token(ES256, &token);
+  sm_token_init(ES256, &token);
   SM_AUTO(sm_sign_ctx) sign_engine;
   sm_es256_sign_init(&sign_engine);
 
@@ -73,7 +73,7 @@ void ec() {
 void rsa() {
   SM_INFO("Testing RS256...\n");
   SM_AUTO(sm_token) token;
-  init_token(RS256, &token);
+  sm_token_init(RS256, &token);
   SM_AUTO(sm_sign_ctx) sign_engine;
   sm_rs256_sign_init(&sign_engine);
 

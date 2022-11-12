@@ -28,13 +28,16 @@ typedef struct {
 // All of these functions are provided in the header file because they're very
 // small and should be inlined when possible.
 
-static inline void sm_circular_buffer_init(sm_circular_buffer *c, size_t qsize,
+/// Initialize a circular buffer with a given number of elements and a given
+/// element size.
+static inline void sm_circular_buffer_init(sm_circular_buffer *c,
+                                           size_t num_elts,
                                            size_t element_size) {
   c->element_size = element_size;
   c->wr = 0;
   c->rd = 0;
   c->buf = sm_empty_buffer;
-  sm_buffer_reserve(&c->buf, qsize * element_size);
+  sm_buffer_reserve(&c->buf, num_elts * element_size);
 }
 
 #define sm_circular_buffer_alias(esize, buffer)                                \
@@ -42,25 +45,30 @@ static inline void sm_circular_buffer_init(sm_circular_buffer *c, size_t qsize,
     .element_size = (esize), .wr = 0, .rd = 0, .buf = (buffer)                 \
   }
 
-static inline void free_sm_circular_buffer(const sm_circular_buffer *c) {
+/// Cleanup the circular buffer.
+static inline void sm_circular_buffer_cleanup(const sm_circular_buffer *c) {
   if (c) {
-    free_sm_buffer(&c->buf);
+    sm_buffer_cleanup(c->buf);
   }
 }
 
+/// Check if the buffer is full.
 static inline bool sm_circular_buffer_full(const sm_circular_buffer c) {
   return c.buf.length == c.buf.capacity;
 }
 
+/// Check if the buffer is empty.
 static inline bool sm_circular_buffer_empty(const sm_circular_buffer c) {
   return c.buf.length == 0;
 }
 
+/// Get a pointer to the current write slot.
 static inline uint8_t *
 sm_circular_buffer_write_slot(const sm_circular_buffer c) {
   return sm_buffer_begin(c.buf) + c.wr;
 }
 
+/// Increment the current write slot.
 static inline void sm_circular_buffer_incr_write_slot(sm_circular_buffer *c) {
   c->wr = (c->wr + c->element_size) % c->buf.capacity;
   // Use the buffer's length to track the number of elements in the queue. Since
@@ -71,11 +79,13 @@ static inline void sm_circular_buffer_incr_write_slot(sm_circular_buffer *c) {
   }
 }
 
+/// Get a pointer to the current read slot.
 static inline uint8_t *
 sm_circular_buffer_read_slot(const sm_circular_buffer c) {
   return sm_buffer_begin(c.buf) + c.rd;
 }
 
+/// Increment the current read slot.
 static inline void sm_circular_buffer_incr_read_slot(sm_circular_buffer *c) {
   c->rd = (c->rd + c->element_size) % c->buf.capacity;
   // Use the buffer's length to track the number of elements in the queue

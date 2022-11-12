@@ -19,6 +19,8 @@
 #include "smithy/stdlib/circular_buffer.h"
 #include "smithy/stdlib/linked_list.h"
 
+/// Provides a vtable for a queue implementation. We have a fixed-size queue and
+/// a growable queue, each with its own tradeoffs.
 typedef struct sm_queue_ sm_queue;
 struct sm_queue_ {
   size_t context_size;
@@ -39,15 +41,15 @@ struct sm_queue_ {
   bool (*empty)(const sm_queue **q);
 };
 
-// Implements a queue within a circular buffer
+/// Implements a queue within a circular buffer.
 extern const sm_queue sm_fixed_size_queue_vtable;
 typedef struct {
   const sm_queue *vtable;
   sm_circular_buffer buf;
 } sm_fixed_size_queue;
 
-// Copies element_size bytes per push/pop. See test/test_queue.c:complex() for
-// an example of packing data after the struct
+/// Copies element_size bytes per push/pop. See test/test_queue.c:complex() for
+/// an example of packing data after the struct
 void sm_fixed_size_queue_init(sm_fixed_size_queue *q, size_t qlen,
                               size_t element_size);
 static inline void free_sm_fixed_size_queue(sm_fixed_size_queue *q) {
@@ -69,6 +71,7 @@ typedef struct {
   size_t element_size;
 } sm_growable_queue;
 
+/// Implements a queue within a linked list.
 void sm_growable_queue_init(sm_growable_queue *q, size_t element_size);
 static inline void free_sm_growable_queue(sm_growable_queue *q) {
   if (q) {
@@ -76,6 +79,7 @@ static inline void free_sm_growable_queue(sm_growable_queue *q) {
   }
 }
 
+/// Check the identity of the queue, see if it can grow.
 static inline bool sm_queue_can_grow(const sm_queue **q) {
   return (*q) == &sm_growable_queue_vtable;
 }

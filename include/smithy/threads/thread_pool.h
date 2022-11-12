@@ -28,6 +28,7 @@
 #include <pthread.h>
 #include <stdatomic.h>
 
+/// This struct should be regarded as opaque.
 typedef struct {
   sm_concurrent_queue q;
   atomic_int pending;
@@ -36,14 +37,22 @@ typedef struct {
   pthread_t workers[SM_THREAD_POOL_THREADS];
 } sm_thread_pool;
 
+/// The type of a worker function on the thread pool.
 typedef void (*worker_fn)(void *args);
 
+/// Initialize a thread pool. This pool is quie static, it requires a fixed work
+/// element size and a fixed worker function. That said, the worker function
+/// could itself perform dispatch and the work element size could be of pointer
+/// size if the user is willing to handle concurrency themselves.
 void sm_thread_pool_init(sm_thread_pool *pool, size_t work_elt_size,
                          worker_fn worker);
+/// Clean up the thread pool.
 void sm_thread_pool_cleanup(sm_thread_pool *pool);
 
-// Returns false if the work queue is full
+/// Submit a job to the thread pool. Returns false if the work queue is full.
 bool sm_thread_pool_submit(sm_thread_pool *pool, void *job);
+/// Tries and waits to submit a job until it's actually successful.
 void sm_thread_pool_must_submit(sm_thread_pool *pool, void *job);
 
+/// Fence the thread pool - force all jobs to quiesce.
 void sm_thread_pool_fence(sm_thread_pool *pool);

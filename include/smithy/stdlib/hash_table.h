@@ -30,6 +30,7 @@ typedef struct {
   sm_buffer *data;
 } sm_hash_table;
 
+/// Init/cleanup a hash table.
 void sm_hash_table_init(sm_hash_table *t);
 void sm_hash_table_cleanup(sm_hash_table *t);
 
@@ -38,19 +39,19 @@ static inline void free_sm_hash_table(sm_hash_table *t) {
   sm_hash_table_cleanup(t);
 }
 
-// Overwrites any data in the map with key @key
+/// Overwrites any data in the map with key @key
 void sm_hash_table_put(sm_hash_table *t, const sm_buffer key, const sm_buffer data);
-// Appends @data to any buffers in the map keyed to @key
+/// Appends @data to any buffers in the map keyed to @key
 void sm_hash_table_append(sm_hash_table *t, const sm_buffer key, const sm_buffer data);
-// Gets the data at @key and places it at the end of @out. Returns true if the
-// item existed
+/// Gets the data at @key and places it at the end of @out. Returns true if the
+/// item existed
 bool sm_hash_table_get(sm_hash_table *t, const sm_buffer key, sm_buffer *out);
-// Get the item but do not copy the data.
+/// Get the item but do not copy the data.
 bool sm_hash_table_get_alias(sm_hash_table *t, const sm_buffer key, sm_buffer *out);
-// Checks if a given key exists
+/// Checks if a given key exists
 bool sm_hash_table_exists(sm_hash_table *t, const sm_buffer key);
-// Remove an item from the hash table by clearing out the buffer and freeing the
-// key.
+/// Remove an item from the hash table by clearing out the buffer and freeing the
+/// key.
 void sm_hash_table_remove(sm_hash_table *t, const sm_buffer key);
-
+/// Clear out the hash table.
 void sm_hash_table_clear(sm_hash_table *t);

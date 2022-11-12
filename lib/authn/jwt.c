@@ -48,7 +48,7 @@ static sm_sign_algorithm parse_algorithm(const char *alg) {
   return UNKNOWN;
 }
 
-void init_token(sm_sign_algorithm alg, sm_token *token) {
+void sm_token_init(sm_sign_algorithm alg, sm_token *token) {
   json_set_alloc_funcs(sm_malloc, sm_free);
 
   token->alg = alg;
@@ -64,7 +64,7 @@ void init_token(sm_sign_algorithm alg, sm_token *token) {
   token->payload = json_object();
 }
 
-void free_token(sm_token *token) {
+void sm_token_cleanup(sm_token *token) {
   if (!token) {
     return;
   }

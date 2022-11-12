@@ -20,6 +20,7 @@
 
 #include <bearssl.h>
 
+/// Supported symmetric encryption algorithms.
 typedef enum {
   SM_AES_128_GCM,
   SM_AES_192_GCM,
@@ -27,6 +28,7 @@ typedef enum {
   SM_CHACHA20_POLY1305,
 } sm_supported_symmetric;
 
+/// This struct shall be treated as opaque.
 typedef struct {
   sm_supported_symmetric algorithm;
   union {
@@ -35,28 +37,31 @@ typedef struct {
   } k;
 } sm_symmetric_key;
 
-// Returns true on success, false on failure. If false, the key is not valid for
-// use.
+/// Creates a key for `algorithm` with bytes `keybytes`. Returns true on
+/// success, false on failure. If false, the key is not valid for use. This
+/// function does not allocate, so it does not have a cleanup function.
 bool sm_symmetric_key_init(sm_symmetric_key *key,
                            const sm_supported_symmetric algorithm,
                            const sm_buffer keybytes);
 
-// Encrypts in-place
+/// Encrypt `crypt` in-place with `aad` and `key`. Random-initializes an IV and
+/// returns it in `iv`.
 void sm_symmetric_encrypt(const sm_symmetric_key *key, sm_buffer *crypt,
                           const sm_buffer aad, sm_buffer *iv);
-// Encrypts in-place
+/// Decrypt `crypt` in-place given `key`, `aad`, and `iv`.
 bool sm_symmetric_decrypt(const sm_symmetric_key *key, sm_buffer *crypt,
                           const sm_buffer aad, const sm_buffer iv);
 
-// Takes a master key and some input bytes and deterministically produces a
-// sub-key according to NIST SP 800-108. Here `input` is Label || 0x00 ||
-// Context from the NIST specification. The rest is handled internally.
+/// Takes a master key and some input bytes and deterministically produces a
+/// sub-key according to NIST SP 800-108. Here `input` is Label || 0x00 ||
+/// Context from the NIST specification. The rest is handled internally.
 void sm_keybytes_from_master(const sm_buffer master, const sm_buffer input,
                              const sm_supported_symmetric algorithm,
                              sm_buffer *key);
 
-// If `salt` is empty then it generates a salt and a new key. The key bytes are
-// stored in `key`
+/// Runs a PBKDF on `password` to get an encryption key and stores the result in
+/// `key`. If `salt` is empty then it generates a salt and a new key. The key
+/// bytes are stored in `key`
 void sm_keybytes_from_password(const sm_buffer password,
                                const size_t iterations,
                                const sm_supported_symmetric algorithm,

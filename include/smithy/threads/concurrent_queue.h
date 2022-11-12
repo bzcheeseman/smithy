@@ -22,6 +22,9 @@
 
 // TODO: make this resize-able with a semaphore
 
+/// This is essentially the same as sm_circular_buffer but with a thread-safe
+/// construction.
+
 typedef struct {
   /// The size of a single element in the queue. This is constant for the
   /// lifetime of the queue.

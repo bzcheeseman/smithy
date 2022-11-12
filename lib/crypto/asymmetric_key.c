@@ -128,7 +128,7 @@ bool sm_create_rsa_keypair(uint16_t bits, br_rsa_private_key *priv,
   return true;
 }
 
-void sm_free_ec_keypair(const br_ec_private_key *priv,
+void sm_ec_keypair_cleanup(const br_ec_private_key *priv,
                         const br_ec_public_key *pub) {
   if (priv) {
     SM_AUTO(sm_buffer) x = sm_buffer_alias(priv->x, priv->xlen);
@@ -141,7 +141,7 @@ void sm_free_ec_keypair(const br_ec_private_key *priv,
   }
 }
 
-void sm_free_rsa_keypair(const br_rsa_private_key *priv,
+void sm_rsa_keypair_cleanup(const br_rsa_private_key *priv,
                          const br_rsa_public_key *pub) {
   // For both of these keys all the elements are stored in a single buffer,
   // which is why we only have to free the first field.

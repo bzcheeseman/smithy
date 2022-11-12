@@ -16,6 +16,7 @@
 
 #pragma once
 
+/// Signing algorithms supported by smithy's crypto module.
 typedef enum {
   UNKNOWN,
   RS256,

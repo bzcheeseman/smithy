@@ -24,40 +24,52 @@
 #include "smithy/crypto/sign_engine.h"
 #include "smithy/crypto/verify_engine.h"
 
+/// Smithy token representation. It outlines a standard JWT. On construction,
+/// the header is filled in with some default values, and the payload is left
+/// empty.
+///
+/// This structure should be treated as opaque.
 typedef struct {
   sm_sign_algorithm alg;
   json_t *header;
   json_t *payload;
 } sm_token;
 
-void init_token(sm_sign_algorithm alg, sm_token *token);
-void free_token(sm_token *token);
+/// Initialize a `sm_token` with a given signing algorithm. This will correctly
+/// set up the header with the `typ` and `alg` fields.
+void sm_token_init(sm_sign_algorithm alg, sm_token *token);
+/// Free a given token.
+void sm_token_cleanup(sm_token *token);
 
-/// Needed for SM_AUTO macro
+/// Needed for SM_AUTO macro.
 static inline void free_sm_token(sm_token *tokenp) {
   if (tokenp) {
-    free_token(tokenp);
+    sm_token_cleanup(tokenp);
   }
 }
 
+/// Debug print a token.
 void sm_token_print(sm_token *token);
 
-// Adding headers to the JSON token
+/// Add a header to the token. The value can be any byte string representable
+/// with an sm_buffer (which is anything you can take the address of).
 void sm_token_add_header(sm_token *token, char *hdr, const sm_buffer value);
+/// Add a string header.
 void sm_token_add_string_header(sm_token *token, char *hdr, char *value);
 
-// Adding claims to the JSON token
+/// Add claims to the token. These functions set the {"claim": <value>}
+/// dictionary as a field in the payload of `token`.
 void sm_token_add_claim(sm_token *token, char *claim, const sm_buffer value);
 void sm_token_add_string_claim(sm_token *token, char *claim, const char *value);
 void sm_token_add_int_claim(sm_token *token, char *claim, int64_t value);
 
-// Getting claims from the JSON token
+/// Get a claim from `token` by name.
 bool sm_token_get_claim(sm_token *token, char *claim, sm_buffer *value);
 
-// Serialization and deserialization. Serialize signs and deserialize verifies
-// the signature.
+/// Serialize and deserialize a token. This will sign (serialize) and verify
+/// (deserialize) the signature on the token.
 bool sm_token_serialize(const sm_token *token, sm_sign_ctx *engine,
-                     sm_buffer *serialized);
+                        sm_buffer *serialized);
 bool sm_token_deserialize(sm_token *token, sm_verify_ctx *engine,
-                       const sm_certificate_chain *chain,
-                       const sm_buffer serialized);
+                          const sm_certificate_chain *chain,
+                          const sm_buffer serialized);

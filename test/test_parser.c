@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
   sm_parser_set_buffer(&ctx, filebuf);
   sm_expression *expr = sm_parser_parse(&ctx);
   sm_itree_traverse(expr, SM_PREORDER, &walk_exprs, NULL);
-  sm_itree_free(expr, NULL);
+  sm_itree_cleanup(expr, NULL);
 
   sm_free(expr);
   sm_parser_cleanup(&ctx);
