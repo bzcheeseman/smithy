@@ -16,7 +16,7 @@
 
 #include "smithy/stdlib/queue.h"
 
-static const size_t nelts = 1000000;
+static const size_t nelts = 100000;
 
 void simple(const sm_queue **q) {
   bool growable = sm_queue_can_grow(q);

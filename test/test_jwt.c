@@ -38,7 +38,7 @@ void ec() {
   SM_AUTO(sm_buffer) ser = sm_empty_buffer;
   sm_token_serialize(&token, &sign_engine, &ser);
 
-  // printf("%.*s\n", sm_buffer_length(&ser), sm_buffer_begin(&ser));
+  // printf("%.*s\n", sm_buffer_length(ser), sm_buffer_begin(ser));
 
   SM_AUTO(sm_verify_ctx) verify_engine;
   sm_es256_verify_init(&verify_engine);
@@ -60,7 +60,7 @@ void ec() {
   SM_ASSERT(sm_token_deserialize(&parsed, &verify_engine, &chain, ser));
   sm_certificate_chain_cleanup(&chain);
 
-  // sm_token_print(parsed);
+  // sm_token_print(&parsed);
 
   SM_AUTO(sm_buffer) claim = sm_empty_buffer;
   sm_token_get_claim(&parsed, "name", &claim);

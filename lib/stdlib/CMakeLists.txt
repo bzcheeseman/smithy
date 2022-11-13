@@ -23,6 +23,15 @@ set(SM_ALLOC_OVERRIDE
         CACHE FILEPATH
         "Fully override the implementation of the interface defined in smithy/stdlib/alloc.h")
 
+option(SM_STATIC_ALLOC "Build smithy with a statically managed allocator." OFF)
+if (SM_STATIC_ALLOC)
+    if (NOT SM_STATIC_HEAP_BYTES)
+        set(SM_STATIC_HEAP_BYTES "67108864") # 128M default heap
+    endif ()
+    add_definitions(-DSM_STATIC_HEAP_BYTES=${SM_STATIC_HEAP_BYTES})
+    set(SM_ALLOC_OVERRIDE "${CMAKE_CURRENT_SOURCE_DIR}/static/alloc.c")
+endif ()
+
 set(SM_RANDOM_BUF
         "arc4random_buf"
         CACHE STRING
