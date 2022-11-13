@@ -29,6 +29,8 @@
 // Set a block size of 64 bytes. This means most allocations should be a single
 // block.
 #define SM_STATIC_HEAP_BLOCKSIZE 64
+#define SM_STATIC_HEAP_BLOCKSIZE_LOG2 6
+#define SM_STATIC_HEAP_BLOCKSIZE_MASK 0x3f
 #define SM_STATIC_HEAP_NUM_BLOCKS                                              \
   (SM_STATIC_HEAP_BYTES / SM_STATIC_HEAP_BLOCKSIZE)
 
@@ -45,7 +47,8 @@ typedef struct {
 static uint8_t heap_[SM_STATIC_HEAP_BYTES];
 // There are SM_STATIC_HEAP_BYTES / SM_STATIC_HEAP_BLOCKSIZE blocks.
 static block *blocks = (block *)heap_;
-// TODO: 2-level bitmap would allow faster scanning
+// Tried a 2-level bitmap, and that actually slowed it down (I guess a cache
+// locality issue, maybe?). Stick with single-level bitmap for now.
 static uint64_t *bitmap = heap_ + SM_STATIC_HEAP_BLOCK_STORAGE_SIZE;
 // heap_start begins after the block storage and after the bitmap.
 const uint8_t *heap_start = heap_ + SM_STATIC_HEAP_BLOCK_STORAGE_SIZE +
@@ -64,10 +67,19 @@ static void init_blocks(void) {
   }
 }
 
-/// Bitmap test/set/clear
-bool test_block(size_t idx) { return (bitmap[idx / 64] >> (idx % 64)) & 1; }
-void alloc_block(size_t idx) { bitmap[idx / 64] |= 1ull << (idx % 64); }
-void free_block(size_t idx) { bitmap[idx / 64] ^= 1ull << (idx % 64); }
+/// Bitmap test/set/clear.
+#define TEST_BLOCK(idx)                                                        \
+  ((bitmap[(idx) >> SM_STATIC_HEAP_BLOCKSIZE_LOG2] >>                          \
+    ((idx)&SM_STATIC_HEAP_BLOCKSIZE_MASK)) &                                   \
+   1)
+
+/// Takes n bits and allocates/frees them all in one bitwise operation.
+#define ALLOC_BLOCKS(idx, n)                                                   \
+  (bitmap[(idx) >> SM_STATIC_HEAP_BLOCKSIZE_LOG2] |=                           \
+   ((1ull << (uint64_t)(n)) - 1) << ((idx)&SM_STATIC_HEAP_BLOCKSIZE_MASK))
+#define FREE_BLOCKS(idx, n)                                                    \
+  (bitmap[(idx) >> SM_STATIC_HEAP_BLOCKSIZE_LOG2] &=                           \
+   ~(((1ull << (uint64_t)(n)) - 1) << ((idx)&SM_STATIC_HEAP_BLOCKSIZE_MASK)))
 
 /// Find the first run of N blocks, and return the index of the first one. This
 /// function is essentially a linear scan over the block list to find a free
@@ -77,20 +89,15 @@ static size_t find_first_block_run(int64_t num_blocks) {
   int64_t blocks_needed = num_blocks;
   size_t idx = SIZE_MAX;
   for (size_t i = 0, e = SM_STATIC_HEAP_NUM_BLOCKS; i < e;) {
-    // We might be able to increment by an entire set of blocks.
-
-    // If this bitmap instance is full, or if this bitmap instance cannot have
-    // enough blocks,
-    uint64_t bitmap_instance = bitmap[i / 64];
-    bool skip = bitmap_instance == UINT64_MAX ||
-                __builtin_popcount(bitmap_instance) < blocks_needed;
-    // Then skip these 64 blocks entirely.
-    if (skip)
+    // If this bitmap instance cannot have enough blocks, skip these 64 blocks
+    // entirely.
+    if (__builtin_popcountll(~bitmap[i >> SM_STATIC_HEAP_BLOCKSIZE_LOG2]) <
+        blocks_needed)
       i += 64;
     else
       ++i;
 
-    if (test_block(i) == 0) {
+    if (TEST_BLOCK(i) == 0) {
       // If the index is unset, set it.
       if (idx == SIZE_MAX)
         idx = i;
@@ -113,24 +120,11 @@ static size_t find_first_block_run(int64_t num_blocks) {
 /// essentially just forwards to find_first_block_run, but returns a pointer.
 static uint8_t *find_alloc_slot(size_t size) {
   SM_ASSERT(size <= INT64_MAX);
-  // If size is less than one block, return the first free block.
-  if (size < SM_STATIC_HEAP_BLOCKSIZE) {
-    size_t block_idx = find_first_block_run(1);
-    if (block_idx == SIZE_MAX)
-      return NULL;
-
-    alloc_block(block_idx);
-    blocks[block_idx].alloc_num_blocks = 1;
-    return blocks[block_idx].ptr;
-  }
-
   // Find the number of blocks, find the first run, and allocate them.
   int64_t num_blocks =
       ((int64_t)size + SM_STATIC_HEAP_BLOCKSIZE - 1) / SM_STATIC_HEAP_BLOCKSIZE;
   size_t block_idx_start = find_first_block_run(num_blocks);
-  for (size_t i = block_idx_start, e = block_idx_start + num_blocks; i < e; ++i)
-    alloc_block(i);
-
+  ALLOC_BLOCKS(block_idx_start, num_blocks);
   blocks[block_idx_start].alloc_num_blocks = num_blocks;
   return blocks[block_idx_start].ptr;
 }
@@ -152,9 +146,8 @@ void *sm_calloc(size_t count, size_t size) {
 
 /// Compute the block index of a given pointer. This can be done by comparing
 /// the addresses and dividing by the block size.
-static inline size_t lookup_block(void *p) {
-  return ((uintptr_t)p - (uintptr_t)blocks[0].ptr) / SM_STATIC_HEAP_BLOCKSIZE;
-}
+#define LOOKUP_BLOCK(p)                                                        \
+  (((uintptr_t)(p) - (uintptr_t)blocks[0].ptr) >> SM_STATIC_HEAP_BLOCKSIZE_LOG2)
 
 void *sm_realloc(void *p, size_t newsz) {
   void *ptr = sm_malloc(newsz);
@@ -166,9 +159,7 @@ void *sm_realloc(void *p, size_t newsz) {
     return ptr;
 
   // Otherwise, find the block.
-  size_t block_idx = lookup_block(p);
-  if (block_idx == SIZE_MAX)
-    return NULL;
+  size_t block_idx = LOOKUP_BLOCK(p);
 
   // Copy the memory over from one allocation to the new one.
   sm_memcpy(ptr, p,
@@ -190,14 +181,12 @@ void sm_free(void *p) {
     return;
 
   // Find the block whose pointer is `p`.
-  size_t start_block = lookup_block(p);
+  size_t start_block = LOOKUP_BLOCK(p);
   // Now free all the blocks in the run.
-  for (size_t i = start_block,
-              e = start_block + blocks[start_block].alloc_num_blocks;
-       i < e; ++i) {
-    sm_memset(blocks[i].ptr, 0, SM_STATIC_HEAP_BLOCKSIZE);
-    free_block(i);
-  }
+  FREE_BLOCKS(start_block, blocks[start_block].alloc_num_blocks);
+  // Memset to 0.
+  sm_memset(p, 0,
+            SM_STATIC_HEAP_BLOCKSIZE * blocks[start_block].alloc_num_blocks);
 }
 
 /// Basic strlen for use in strdup below.
