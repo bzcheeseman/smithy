@@ -35,9 +35,7 @@ static void buffer_grow_(sm_buffer *buf, size_t newsize) {
     return;
   }
 
-  void *tmp = sm_realloc(buf->data, newsize);
-  SM_ASSERT(tmp);
-  buf->data = tmp;
+  buf->data = sm_safe_realloc(buf->data, newsize);
   buf->capacity = newsize;
 }
 

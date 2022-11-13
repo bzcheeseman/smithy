@@ -15,12 +15,11 @@
 // limitations under the License.
 
 #include "smithy/stdlib/alloc.h"
-#include "smithy/stdlib/logging.h"
 #include "smithy/stdlib/assert.h"
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
 
 #ifndef SM_CALLOC_IMPL
 #error "Must define calloc"

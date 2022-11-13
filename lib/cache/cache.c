@@ -52,7 +52,10 @@ static void sm_cache_set_nodir(sm_cache *c) {
 
 void sm_cache_init(sm_cache *c, const char *path) {
   sm_hash_table_init(&c->hot);
-  path == NULL ? sm_cache_set_nodir(c) : sm_cache_set_dir(c, path);
+  if (path != NULL)
+    return sm_cache_set_dir(c, path);
+
+  sm_cache_set_nodir(c);
 }
 
 void sm_cache_cleanup(sm_cache *c) {
