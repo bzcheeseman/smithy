@@ -23,7 +23,7 @@ set(SM_ALLOC_OVERRIDE
         CACHE FILEPATH
         "Fully override the implementation of the interface defined in smithy/stdlib/alloc.h")
 
-option(SM_STATIC_ALLOC "Build smithy with a statically managed allocator." ON)
+option(SM_STATIC_ALLOC "Build smithy with a statically managed allocator." OFF)
 if (SM_STATIC_ALLOC)
     if (NOT SM_STATIC_HEAP_BYTES)
         set(SM_STATIC_HEAP_BYTES "67108864") # 64M default heap
