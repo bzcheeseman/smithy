@@ -34,9 +34,9 @@ static log_fn log_func = NULL;
 
 static void *log_ctx = NULL;
 
-void set_log_fn(log_fn fn) { log_func = fn; }
+void sm_set_log_fn(log_fn fn) { log_func = fn; }
 
-void set_log_ctx(void *ctx) { log_ctx = ctx; }
+void sm_set_log_ctx(void *ctx) { log_ctx = ctx; }
 
 static char *lvls[] = {"[DEBUG] ", "[INFO] ", "[ERROR] ", "[FATAL] "};
 

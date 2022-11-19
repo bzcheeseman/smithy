@@ -30,8 +30,8 @@ typedef enum {
 typedef void (*log_fn)(void *, const char *, va_list);
 
 /// Set the log function and log context variables.
-void set_log_fn(log_fn fn);
-void set_log_ctx(void *ctx);
+void sm_set_log_fn(log_fn fn);
+void sm_set_log_ctx(void *ctx);
 
 void sm_log_expr(sm_log_level level, char *fmt, ...);
 
