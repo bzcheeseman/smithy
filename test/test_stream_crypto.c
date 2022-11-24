@@ -26,7 +26,7 @@ void simple(void) {
   sm_symmetric_key_init(&symm_key, SM_CHACHA20_POLY1305, key);
 
   SM_AUTO(sm_stream_ctx) ctx;
-  sm_stream_ctx_init(&ctx, symm_key);
+  sm_stream_ctx_init(&ctx, symm_key, NULL);
 
   SM_AUTO(sm_buffer) message = sm_empty_buffer;
   sm_buffer_resize(&message, 256);
@@ -44,8 +44,13 @@ void simple(void) {
     SM_ASSERT(!sm_buffer_equal(alias, copy_alias));
   }
 
+  // Use a different context for decryption to ensure that works the way it's
+  // supposed to.
+  SM_AUTO(sm_stream_ctx) ctx2;
+  sm_stream_ctx_init(&ctx2, symm_key, &(ctx.iv));
+
   // Ensure decryption works for the whole buffer.
-  bool decrypted = sm_stream_decrypt(&ctx, message, 0);
+  bool decrypted = sm_stream_decrypt(&ctx2, message, 0);
   SM_ASSERT(decrypted && sm_buffer_equal(message, copy));
 }
 
@@ -59,7 +64,7 @@ void decrypt_mid_stream(void) {
   sm_symmetric_key_init(&symm_key, SM_CHACHA20_POLY1305, key);
 
   SM_AUTO(sm_stream_ctx) ctx;
-  sm_stream_ctx_init(&ctx, symm_key);
+  sm_stream_ctx_init(&ctx, symm_key, NULL);
 
   SM_AUTO(sm_buffer) message = sm_empty_buffer;
   sm_buffer_resize(&message, 256);
@@ -77,10 +82,15 @@ void decrypt_mid_stream(void) {
     SM_ASSERT(!sm_buffer_equal(alias, copy_alias));
   }
 
+  // Use a different context for decryption to ensure that works the way it's
+  // supposed to.
+  SM_AUTO(sm_stream_ctx) ctx2;
+  sm_stream_ctx_init(&ctx2, symm_key, &(ctx.iv));
+
   // Decrypt more than 1 block in the middle.
   sm_buffer copy_alias = sm_buffer_alias(sm_buffer_begin(copy) + 79, 68);
   sm_buffer decrypt_alias = sm_buffer_alias(sm_buffer_begin(message) + 79, 68);
-  bool decrypt = sm_stream_decrypt(&ctx, decrypt_alias, 79);
+  bool decrypt = sm_stream_decrypt(&ctx2, decrypt_alias, 79);
   SM_ASSERT(decrypt && sm_buffer_equal(decrypt_alias, copy_alias));
 }
 
@@ -94,7 +104,7 @@ void small(void) {
   sm_symmetric_key_init(&symm_key, SM_CHACHA20_POLY1305, key);
 
   SM_AUTO(sm_stream_ctx) ctx;
-  sm_stream_ctx_init(&ctx, symm_key);
+  sm_stream_ctx_init(&ctx, symm_key, NULL);
 
   SM_AUTO(sm_buffer) message = sm_empty_buffer;
   sm_buffer_resize(&message, 13);
@@ -105,8 +115,13 @@ void small(void) {
 
   sm_stream_encrypt(&ctx, message);
 
+  // Use a different context for decryption to ensure that works the way it's
+  // supposed to.
+  SM_AUTO(sm_stream_ctx) ctx2;
+  sm_stream_ctx_init(&ctx2, symm_key, &(ctx.iv));
+
   // Ensure decryption works for the whole buffer.
-  bool decrypted = sm_stream_decrypt(&ctx, message, 0);
+  bool decrypted = sm_stream_decrypt(&ctx2, message, 0);
   SM_ASSERT(decrypted && sm_buffer_equal(message, copy));
 }
 
@@ -120,7 +135,7 @@ void small_decrypt(void) {
   sm_symmetric_key_init(&symm_key, SM_CHACHA20_POLY1305, key);
 
   SM_AUTO(sm_stream_ctx) ctx;
-  sm_stream_ctx_init(&ctx, symm_key);
+  sm_stream_ctx_init(&ctx, symm_key, NULL);
 
   SM_AUTO(sm_buffer) message = sm_empty_buffer;
   sm_buffer_resize(&message, 256);
@@ -131,10 +146,15 @@ void small_decrypt(void) {
 
   sm_stream_encrypt(&ctx, message);
 
+  // Use a different context for decryption to ensure that works the way it's
+  // supposed to.
+  SM_AUTO(sm_stream_ctx) ctx2;
+  sm_stream_ctx_init(&ctx2, symm_key, &(ctx.iv));
+
   // Decrypt just a few bytes in the middle.
   sm_buffer copy_alias = sm_buffer_alias(sm_buffer_begin(copy) + 79, 3);
   sm_buffer alias = sm_buffer_alias(sm_buffer_begin(message) + 79, 3);
-  bool decrypted = sm_stream_decrypt(&ctx, alias, 79);
+  bool decrypted = sm_stream_decrypt(&ctx2, alias, 79);
   SM_ASSERT(decrypted && sm_buffer_equal(alias, copy_alias));
 }
 
@@ -148,7 +168,7 @@ void simple_aes(void) {
   sm_symmetric_key_init(&symm_key, SM_AES_256_GCM, key);
 
   SM_AUTO(sm_stream_ctx) ctx;
-  sm_stream_ctx_init(&ctx, symm_key);
+  sm_stream_ctx_init(&ctx, symm_key, NULL);
 
   SM_AUTO(sm_buffer) message = sm_empty_buffer;
   sm_buffer_resize(&message, 256);
@@ -166,8 +186,13 @@ void simple_aes(void) {
     SM_ASSERT(!sm_buffer_equal(alias, copy_alias));
   }
 
+  // Use a different context for decryption to ensure that works the way it's
+  // supposed to.
+  SM_AUTO(sm_stream_ctx) ctx2;
+  sm_stream_ctx_init(&ctx2, symm_key, &(ctx.iv));
+
   // Ensure decryption works for the whole buffer.
-  bool decrypted = sm_stream_decrypt(&ctx, message, 0);
+  bool decrypted = sm_stream_decrypt(&ctx2, message, 0);
   SM_ASSERT(decrypted && sm_buffer_equal(message, copy));
 }
 
@@ -193,7 +218,7 @@ void decrypt_mid_stream_aes(sm_supported_symmetric alg) {
   sm_symmetric_key_init(&symm_key, alg, key);
 
   SM_AUTO(sm_stream_ctx) ctx;
-  sm_stream_ctx_init(&ctx, symm_key);
+  sm_stream_ctx_init(&ctx, symm_key, NULL);
 
   SM_AUTO(sm_buffer) message = sm_empty_buffer;
   sm_buffer_resize(&message, 256);
@@ -211,10 +236,15 @@ void decrypt_mid_stream_aes(sm_supported_symmetric alg) {
     SM_ASSERT(!sm_buffer_equal(alias, copy_alias));
   }
 
+  // Use a different context for decryption to ensure that works the way it's
+  // supposed to.
+  SM_AUTO(sm_stream_ctx) ctx2;
+  sm_stream_ctx_init(&ctx2, symm_key, &(ctx.iv));
+
   // Decrypt a more than 1 block in the middle.
   sm_buffer copy_alias = sm_buffer_alias(sm_buffer_begin(copy) + 79, 68);
   sm_buffer alias = sm_buffer_alias(sm_buffer_begin(message) + 79, 68);
-  bool decrypt = sm_stream_decrypt(&ctx, alias, 79);
+  bool decrypt = sm_stream_decrypt(&ctx2, alias, 79);
   SM_ASSERT(decrypt && sm_buffer_equal(alias, copy_alias));
 }
 

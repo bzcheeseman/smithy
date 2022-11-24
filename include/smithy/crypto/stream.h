@@ -21,18 +21,24 @@
 
 #include <bearssl.h>
 
+/// The context for stream encryption. This struct shall be regarded as opaque.
 typedef struct {
   uint32_t counter;
   sm_symmetric_key key;
   sm_buffer iv;
 } sm_stream_ctx;
 
-/// Initialize a stream context with the provided key bytes. Note that this is
-/// unauthenticated encryption because GCM/POLY1305 are authentication tags
-/// computed over the entire cipher stream. If you want authenticated
-/// encryption, you should either layer a signature over this or use the
-/// sm_symmetric_* APIs.
-void sm_stream_ctx_init(sm_stream_ctx *ctx, sm_symmetric_key key);
+/// Initialize a stream context with the provided key bytes. This initializes
+/// the counter to 0 - it assumes that the context will be used for an entire
+/// stream. If the IV is provided, it copies the bytes into its internal
+/// context, otherwise it initializes the IV randomly using the system CSPRNG.
+///
+/// Note that this is unauthenticated encryption because GCM/POLY1305 are
+/// authentication tags computed over the entire cipher stream. If you want
+/// authenticated encryption, you should either layer a signature over this or
+/// use the sm_symmetric_* APIs.
+void sm_stream_ctx_init(sm_stream_ctx *ctx, sm_symmetric_key key,
+                        sm_buffer *iv);
 
 /// Clean up the stream context. This will free the data in the
 /// randomly-initialized IV.

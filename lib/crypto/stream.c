@@ -16,9 +16,16 @@
 
 #include "smithy/crypto/stream.h"
 
-void sm_stream_ctx_init(sm_stream_ctx *ctx, sm_symmetric_key key) {
+void sm_stream_ctx_init(sm_stream_ctx *ctx, sm_symmetric_key key,
+                        sm_buffer *iv) {
   ctx->counter = 0;
   ctx->key = key;
+
+  // If an IV was provided, use it. The context takes ownership of the IV.
+  if (iv) {
+    ctx->iv = sm_buffer_clone(*iv);
+    return;
+  }
 
   // Initialize the IV with a random number.
   ctx->iv = sm_empty_buffer;
