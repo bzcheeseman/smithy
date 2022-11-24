@@ -7,6 +7,7 @@ set(SRC
         rsa_sign.c
         rsa_verify.c
         sign_engine.c
+        stream.c
         symmetric_key.c
         trust_store.c
         verify_engine.c)

@@ -43,6 +43,30 @@ void crypt(sm_buffer keybytes, sm_supported_symmetric algorithm) {
   SM_ASSERT(sm_buffer_equal(check, data));
 }
 
+void crypt_small(sm_buffer keybytes, sm_supported_symmetric algorithm) {
+  sm_symmetric_key k;
+  sm_symmetric_key_init(&k, algorithm, keybytes);
+
+  SM_AUTO(sm_buffer) data = sm_empty_buffer;
+  sm_buffer_resize(&data, 10);
+  sm_buffer_fill_rand(data, sm_buffer_begin(data), sm_buffer_end(data));
+
+  SM_AUTO(sm_buffer) check = sm_buffer_clone(data);
+  SM_AUTO(sm_buffer) iv = sm_empty_buffer;
+  sm_symmetric_encrypt(&k, &data, sm_empty_buffer, &iv);
+
+  // Ensure the encryption changed the data
+  sm_buffer msg_only =
+      sm_buffer_alias(sm_buffer_begin(data), sm_buffer_length(data) - 16);
+  SM_ASSERT(!sm_buffer_equal(check, data));
+  SM_ASSERT(!sm_buffer_equal(check, msg_only));
+
+  // And decrypt
+  SM_ASSERT(sm_symmetric_decrypt(&k, &data, sm_empty_buffer, iv));
+  // Make sure we got the right data
+  SM_ASSERT(sm_buffer_equal(check, data));
+}
+
 void aes_128(void) {
   SM_AUTO(sm_buffer) keybytes = sm_empty_buffer;
   sm_buffer_resize(&keybytes, 16);
@@ -50,6 +74,7 @@ void aes_128(void) {
                       sm_buffer_end(keybytes));
 
   crypt(keybytes, SM_AES_128_GCM);
+  crypt_small(keybytes, SM_AES_128_GCM);
 }
 
 void aes_128_fail(void) {
@@ -71,6 +96,7 @@ void aes_192(void) {
                       sm_buffer_end(keybytes));
 
   crypt(keybytes, SM_AES_192_GCM);
+  crypt_small(keybytes, SM_AES_192_GCM);
 }
 
 void aes_192_fail(void) {
@@ -92,6 +118,7 @@ void aes_256(void) {
                       sm_buffer_end(keybytes));
 
   crypt(keybytes, SM_AES_256_GCM);
+  crypt_small(keybytes, SM_AES_256_GCM);
 }
 
 void aes_256_fail(void) {
@@ -110,6 +137,7 @@ void chacha(void) {
                       sm_buffer_end(keybytes));
 
   crypt(keybytes, SM_CHACHA20_POLY1305);
+  crypt_small(keybytes, SM_CHACHA20_POLY1305);
 }
 
 void chacha_fail(void) {
