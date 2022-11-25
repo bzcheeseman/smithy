@@ -91,8 +91,19 @@ static inline bool sm_concurrent_queue_full(const sm_concurrent_queue *c) {
          !sm_concurrent_queue_empty(c);
 }
 
+/// Peek can fail if the queue is empty. Returns NULL on failure, and the
+/// pointer to the head of the element on success. Does not increment the read
+/// pointer.
+static inline uint8_t *sm_concurrent_queue_peek(sm_concurrent_queue *c) {
+  if (sm_concurrent_queue_empty(c))
+    return NULL;
+
+  uint8_t *slot = sm_concurrent_queue_read_slot(c);
+  return slot;
+}
+
 /// Pop can fail if the queue is empty. Returns NULL on failure, the pointer to
-/// the head of the element on success.
+/// the head of the element on success. Increments the read pointer.
 static inline uint8_t *sm_concurrent_queue_pop(sm_concurrent_queue *c) {
   if (sm_concurrent_queue_empty(c))
     return NULL;

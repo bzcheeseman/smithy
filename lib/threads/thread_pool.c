@@ -66,9 +66,12 @@ static void *thread_func(void *args) {
     if (err != 0)
       SM_FATAL("sm_semaphore_wait failed with %s\n", strerror(errno));
 
-    uint8_t *read = sm_concurrent_queue_pop(a->q);
+    uint8_t *read = sm_concurrent_queue_peek(a->q);
     if (read) {
+      // Copy from the queue to the local element because it may be overwritten.
       memcpy(element, read, element_size);
+      // Now it's OK to pop - we can overwrite the data now.
+      sm_concurrent_queue_pop(a->q);
       // If it's not the stop signal, then do the work.
       keep_going = !is_stop_signal(element, element_size);
       if (keep_going)
