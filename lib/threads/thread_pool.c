@@ -49,8 +49,6 @@ static bool is_stop_signal(void *e, size_t bytes) {
   return is_stop;
 }
 
-static const uint8_t zeros[INT16_MAX];
-
 static void *thread_func(void *args) {
   thread_args *a = args;
   // Get the element size
@@ -88,7 +86,7 @@ static void *thread_func(void *args) {
 // TODO: tune queue depth
 void sm_thread_pool_init(sm_thread_pool *pool, size_t work_elt_size,
                          worker_fn worker) {
-  sm_concurrent_queue_init(&pool->q, SM_THREAD_POOL_THREADS, work_elt_size);
+  sm_concurrent_queue_init(&pool->q, 32, work_elt_size);
   pool->sema = sm_semaphore_open(0);
   if (pool->sema == SEM_FAILED)
     SM_FATAL("Failed to create semaphore with %s\n", strerror(errno));

@@ -23,7 +23,7 @@ void work(void *arg) {
   printf("%s\n", s);
 }
 
-static const int niters = 10;
+#define niters 10
 
 void simple() {
   sm_thread_pool pool;

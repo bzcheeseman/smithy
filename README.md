@@ -104,3 +104,5 @@ Turn off with `-DSM_BUILD_THREADS=OFF`
 
 TODO: make threads fully capable of running with no OS?
 TODO: add select/poll functionality
+
+Useful bit-twiddling tricks: https://github.com/electronicarts/EAStdC/blob/master/include/EAStdC/EABitTricks.h
