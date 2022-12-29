@@ -35,4 +35,9 @@ cmake_dependent_option(SM_BUILD_THREADS "Build the threads module" ON "SM_BUILD_
 cmake_dependent_option(SM_BUILD_AUTHN "Build the authn (JWT) module" ON "SM_BUILD_STDLIB;SM_BUILD_CRYPTO;SM_BUILD_JSON" OFF)
 
 add_subdirectory(lib)
-add_subdirectory(test)
+
+option(SM_BUILD_TESTS "Build the unit tests" ON)
+if (${SM_BUILD_TESTS})
+    enable_testing()
+    add_subdirectory(test)
+endif()

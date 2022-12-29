@@ -1,4 +1,3 @@
-enable_testing()
 add_custom_target(check-smithy COMMAND ${CMAKE_CTEST_COMMAND} -j --schedule-random -V)
 
 file(GLOB HELPERS ${CMAKE_CURRENT_SOURCE_DIR}/utils/*)
