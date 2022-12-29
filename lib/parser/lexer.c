@@ -193,31 +193,35 @@ sm_token sm_lexer_lex(sm_lexer_context *ctx) {
   for (size_t i = 0; i < ctx->num_delimited; ++i) {
     // These delimiters are too long for the number of tokens in the buffer.
     if (sm_buffer_end(ctx->current_buffer) - token_start <
-        strlen(ctx->delimiter_open[i]) + strlen(ctx->delimiter_close[i])) {
+        strlen((const char *)ctx->delimiter_open[i]) +
+            strlen((const char *)ctx->delimiter_close[i])) {
       continue;
     }
 
-    const sm_buffer token_alias =
-        sm_buffer_alias(token_start, strlen(ctx->delimiter_open[i]));
-    const sm_buffer open_alias = sm_buffer_alias_str(ctx->delimiter_open[i]);
+    const sm_buffer token_alias = sm_buffer_alias(
+        (uint8_t *)token_start, strlen((const char *)ctx->delimiter_open[i]));
+    const sm_buffer open_alias =
+        sm_buffer_alias_str((const char *)ctx->delimiter_open[i]);
     if (!sm_buffer_has_prefix(token_alias, open_alias)) {
       continue;
     }
-    ctx->current_ptr += strlen(ctx->delimiter_open[i]) - 1;
+    ctx->current_ptr += strlen((const char *)ctx->delimiter_open[i]) - 1;
 
     // So at this point, we're at the first char of the delimiter. If the
     // full current pointer alias is the delimiter, then return the token.
-    sm_buffer current_ptr_alias = sm_buffer_alias_str(ctx->current_ptr);
-    const sm_buffer close_alias = sm_buffer_alias_str(ctx->delimiter_close[i]);
+    sm_buffer current_ptr_alias =
+        sm_buffer_alias_str((const char *)ctx->current_ptr);
+    const sm_buffer close_alias =
+        sm_buffer_alias_str((const char *)ctx->delimiter_close[i]);
     while (!sm_buffer_has_prefix(current_ptr_alias, close_alias)) {
       ++ctx->current_ptr;
-      current_ptr_alias = sm_buffer_alias_str(ctx->current_ptr);
+      current_ptr_alias = sm_buffer_alias_str((const char *)ctx->current_ptr);
     }
     // Increment the current ptr by the length of the close alias.
     ctx->current_ptr += sm_buffer_length(close_alias);
 
     const sm_buffer spelling =
-        sm_buffer_alias(token_start, ctx->current_ptr - token_start);
+        sm_buffer_alias((uint8_t *)token_start, ctx->current_ptr - token_start);
     return (sm_token){ctx->delimited_kinds[i], spelling};
   }
 
@@ -228,8 +232,8 @@ sm_token sm_lexer_lex(sm_lexer_context *ctx) {
       continue;
     }
 
-    const sm_buffer token_alias =
-        sm_buffer_alias(token_start, ctx->literal_spellings[i].length);
+    const sm_buffer token_alias = sm_buffer_alias(
+        (uint8_t *)token_start, ctx->literal_spellings[i].length);
     if (sm_buffer_equal(ctx->literal_spellings[i], token_alias) &&
         ctx->literal_spellings[i].length != 0) {
       ctx->current_ptr += sm_buffer_length(token_alias) - 1;
@@ -245,18 +249,18 @@ sm_token sm_lexer_lex(sm_lexer_context *ctx) {
     ++ctx->current_ptr;
   }
   const sm_buffer token_alias =
-      sm_buffer_alias(token_start, ctx->current_ptr - token_start);
+      sm_buffer_alias((uint8_t *)token_start, ctx->current_ptr - token_start);
 
   uint8_t *saveptr;
 
   // For integers, detect the base.
-  (void)strtol(sm_buffer_as_str(token_alias), (char *)&saveptr, 0);
+  (void)strtol(sm_buffer_as_str(token_alias), (char **)&saveptr, 0);
   if (saveptr == sm_buffer_end(token_alias)) {
     return (sm_token){SM_TOKEN_KIND_LITERAL, token_alias};
   }
 
   // Then try float.
-  (void)strtod(sm_buffer_as_str(token_alias), (char *)&saveptr);
+  (void)strtod(sm_buffer_as_str(token_alias), (char **)&saveptr);
   if (saveptr == sm_buffer_end(token_alias)) {
     return (sm_token){SM_TOKEN_KIND_LITERAL, token_alias};
   }

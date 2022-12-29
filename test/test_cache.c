@@ -17,7 +17,7 @@
 #include "smithy/cache/cache.h"
 #include "smithy/stdlib/buffer.h"
 
-int main() {
+int main(int argc, char *argv[]) {
   sm_cache table;
   sm_cache_init(&table, "/private/tmp/smithy_cache_test");
 

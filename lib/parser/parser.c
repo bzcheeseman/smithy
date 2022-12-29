@@ -22,7 +22,6 @@
 void sm_parser_cleanup(sm_parser_context *ctx) {
   for (size_t i = 0; i < ctx->num_exprs; ++i) {
     sm_free(ctx->registered_exprs[i].token_kinds);
-    size_t end = ABS(ctx->registered_exprs[i].num_tokens);
     sm_free(ctx->registered_exprs[i].token_fmts);
   }
   sm_free(ctx->registered_exprs);
@@ -101,8 +100,9 @@ static void expr_kind_to_internal(sm_lexer_context *lexer,
       token_kind = *(uint32_t *)found_token_kind.data;
     } else {
       token_kind = SM_TOKEN_KIND_USER_START + token_kind_base++;
-      sm_hash_table_put(seen_tokens, spelling,
-                        sm_buffer_alias(&token_kind, sizeof(uint32_t)));
+      sm_hash_table_put(
+          seen_tokens, spelling,
+          sm_buffer_alias((uint8_t *)&token_kind, sizeof(uint32_t)));
     }
 
     internal->token_kinds = sm_safe_realloc_array(internal->token_kinds, n + 1);
@@ -220,7 +220,7 @@ static sm_expression *parse_simple_expression(sm_parser_context *ctx,
       // closer.
       sm_expression *out = sm_malloc(sizeof(sm_expression));
       *out = (sm_expression){
-          .tree = {.parent = parent},
+          .tree = {.parent = (sm_itree *)parent},
           .kind = SM_ARRAY_EXPR_KIND,
           .loc = {{sm_buffer_begin(ctx->current_token.spelling)}}};
       // Lex the opening token.
@@ -246,7 +246,7 @@ static sm_expression *parse_simple_expression(sm_parser_context *ctx,
       // delimiter, fourth token is closer.
       sm_expression *out = sm_malloc(sizeof(sm_expression));
       *out = (sm_expression){
-          .tree = {.parent = parent},
+          .tree = {.parent = (sm_itree *)parent},
           .kind = SM_MAP_EXPR_KIND,
           .loc = {{sm_buffer_begin(ctx->current_token.spelling)}}};
       // Lex the opening token.
@@ -273,7 +273,7 @@ static sm_expression *parse_simple_expression(sm_parser_context *ctx,
     if (ctx->expr_kinds[i] == SM_STRING_EXPR_KIND) {
       sm_expression *out = sm_malloc(sizeof(sm_expression));
       *out = (sm_expression){
-          .tree = {.parent = parent},
+          .tree = {.parent = (sm_itree *)parent},
           .kind = SM_STRING_EXPR_KIND,
           .loc = {{sm_buffer_begin(ctx->current_token.spelling)},
                   {sm_buffer_end(ctx->current_token.spelling)}}};
@@ -293,8 +293,8 @@ static sm_expression *parse_compound_expression(sm_parser_context *ctx,
   uint8_t *expr_start = sm_buffer_begin(ctx->current_token.spelling);
   sm_expression *o = NULL;
   SM_AUTO(sm_expression) *out = sm_malloc(sizeof(sm_expression));
-  *out =
-      (sm_expression){.tree = {.parent = parent}, .kind = SM_INVALID_EXPR_KIND};
+  *out = (sm_expression){.tree = {.parent = (sm_itree *)parent},
+                         .kind = SM_INVALID_EXPR_KIND};
   sm_token last_expr_token = ctx->current_token;
 
   // Check if the first token of any expression matches this one.

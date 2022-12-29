@@ -166,7 +166,7 @@ void sm_close(sm_file *f) {
   sm_free(f);
 }
 
-sm_file *sm_stderr() {
+sm_file *sm_stderr(void) {
   sm_file *out = sm_malloc(sizeof(sm_file));
   out->handle = (uint64_t)stderr;
   // Set up symbol table
@@ -178,7 +178,7 @@ sm_file *sm_stderr() {
   return out;
 }
 
-sm_file *sm_stdout() {
+sm_file *sm_stdout(void) {
   sm_file *out = sm_malloc(sizeof(sm_file));
   out->handle = (uint64_t)stdout;
   // Set up symbol table

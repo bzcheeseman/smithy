@@ -28,7 +28,7 @@ sm_expression_kind exprs[] = {
     {.kind = SM_STRING_EXPR_KIND, .spelling = sm_buffer_alias_str("`[{ }]`")},
 };
 
-bool walk_exprs(void *, sm_itree *tree) {
+bool walk_exprs(void *ctx, sm_itree *tree) {
   sm_expression *expr = (sm_expression *)tree;
   if (!expr || expr->kind == 3) {
     return true;
@@ -54,8 +54,8 @@ int main(int argc, char *argv[]) {
   sm_buffer filebuf = sm_source_manager_get_filebuffer(&source_mgr, handle);
   sm_parser_set_buffer(&ctx, filebuf);
   sm_expression *expr = sm_parser_parse(&ctx);
-  sm_itree_traverse(expr, SM_PREORDER, &walk_exprs, NULL);
-  sm_itree_cleanup(expr, NULL);
+  sm_itree_traverse((sm_itree *)expr, SM_PREORDER, &walk_exprs, NULL);
+  sm_itree_cleanup((sm_itree *)expr, NULL);
 
   sm_free(expr);
   sm_parser_cleanup(&ctx);

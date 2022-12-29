@@ -30,42 +30,6 @@ void sm_itree_init(sm_itree *root) { *root = sm_empty_itree; }
 //       was found.
 typedef bool (*traverse_fn)(void *ctx, sm_ptr_u1_pair node);
 
-static void itree_bfs_impl(sm_ptr_u1_pair root, traverse_fn fn, void *ctx) {
-  SM_AUTO(sm_growable_queue) bfs_growable_queue;
-  sm_growable_queue_init(&bfs_growable_queue, sizeof(sm_ptr_u1_pair));
-
-  const sm_queue **bfs_q = (const sm_queue **)&bfs_growable_queue;
-
-  (*bfs_q)->force_push(bfs_q, &root);
-
-  while (!(*bfs_q)->empty(bfs_q)) {
-    sm_ptr_u1_pair next;
-    SM_ASSERT((*bfs_q)->pop(bfs_q, (void *)&next));
-    sm_itree *tree_node = sm_ptr_u1_pair_get_ptr(next);
-
-    // Push all the children onto the queue.
-    for (size_t child = 0; child < childlist_len(tree_node->children);
-         ++child) {
-      (*bfs_q)->force_push(bfs_q, childlist_gep(tree_node->children, child));
-    }
-
-    if (!fn(ctx, next)) {
-      return;
-    }
-  }
-}
-
-static void itree_dfs_impl(sm_ptr_u1_pair root, traverse_fn fn, void *ctx) {
-  // TODO: make this iterative with a stack.
-  if (!fn(ctx, root)) {
-    return;
-  }
-  sm_itree *tree_node = sm_ptr_u1_pair_get_ptr(root);
-  for (size_t child = 0; child < childlist_len(tree_node->children); ++child) {
-    itree_dfs_impl(childlist_at(tree_node->children, child), fn, ctx);
-  }
-}
-
 typedef struct {
   sm_ilist list;
   sm_ptr_u1_pair node;
@@ -76,7 +40,7 @@ void traversal_stack_push(traversal_stack_node **head, sm_ptr_u1_pair ptr) {
   node->node = ptr;
   if (*head != NULL) {
     // Take ownership of the node.
-    sm_ilist_take_front(*head, node);
+    sm_ilist_take_front((sm_ilist *)*head, (sm_ilist *)node);
   }
   // `head` is the new node.
   *head = node;

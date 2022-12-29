@@ -44,8 +44,8 @@ sm_file *sm_open(const char *path, const char *mode);
 void sm_close(sm_file *f);
 
 /// sm_file aliases for stderr/stdout.
-sm_file *sm_stderr();
-sm_file *sm_stdout();
+sm_file *sm_stderr(void);
+sm_file *sm_stdout(void);
 
 /// Needed for SM_AUTO macro - close the file rather than freeing though.
 static inline void free_sm_file(sm_file **f) {
