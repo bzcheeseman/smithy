@@ -30,7 +30,7 @@ typedef struct {
 
 bool simple_traverse(void *c, sm_itree *node) {
   simple_traversal_ctx *ctx = c;
-  foo *f = node;
+  foo *f = (foo *)node;
   ctx->data[ctx->i++] = f->data;
   return true;
 }
@@ -55,22 +55,23 @@ bool simple_traverse(void *c, sm_itree *node) {
 // 3, 5, 2, 4, 0, 1
 
 static foo simple_tree[6] = {{sm_empty_itree, 0}, {sm_empty_itree, 1},
-                      {sm_empty_itree, 2}, {sm_empty_itree, 3},
-                      {sm_empty_itree, 4}, {sm_empty_itree, 5}};
-void build_simple_tree() {
-  sm_itree_add_child(&simple_tree[0], &simple_tree[1]);
-  sm_itree_add_child(&simple_tree[0], &simple_tree[2]);
-  sm_itree_add_child(&simple_tree[0], &simple_tree[3]);
-  sm_itree_add_child(&simple_tree[2], &simple_tree[4]);
-  sm_itree_add_child(&simple_tree[2], &simple_tree[5]);
+                             {sm_empty_itree, 2}, {sm_empty_itree, 3},
+                             {sm_empty_itree, 4}, {sm_empty_itree, 5}};
+void build_simple_tree(void) {
+  sm_itree_add_child((sm_itree *)&simple_tree[0], (sm_itree *)&simple_tree[1]);
+  sm_itree_add_child((sm_itree *)&simple_tree[0], (sm_itree *)&simple_tree[2]);
+  sm_itree_add_child((sm_itree *)&simple_tree[0], (sm_itree *)&simple_tree[3]);
+  sm_itree_add_child((sm_itree *)&simple_tree[2], (sm_itree *)&simple_tree[4]);
+  sm_itree_add_child((sm_itree *)&simple_tree[2], (sm_itree *)&simple_tree[5]);
 }
 
-void simple_postorder() {
+void simple_postorder(void) {
   simple_traversal_ctx ctx = {.i = 0,
                               .data = {
                                   0,
                               }};
-  sm_itree_traverse(&simple_tree[0], SM_POSTORDER, &simple_traverse, &ctx);
+  sm_itree_traverse((sm_itree *)&simple_tree[0], SM_POSTORDER, &simple_traverse,
+                    &ctx);
   SM_ASSERT(ctx.data[0] == 1);
   SM_ASSERT(ctx.data[1] == 4);
   SM_ASSERT(ctx.data[2] == 5);
@@ -79,12 +80,13 @@ void simple_postorder() {
   SM_ASSERT(ctx.data[5] == 0);
 }
 
-void simple_reverse_postorder() {
+void simple_reverse_postorder(void) {
   simple_traversal_ctx ctx = {.i = 0,
                               .data = {
                                   0,
                               }};
-  sm_itree_traverse(&simple_tree[0], SM_REVERSE_POSTORDER, &simple_traverse, &ctx);
+  sm_itree_traverse((sm_itree *)&simple_tree[0], SM_REVERSE_POSTORDER,
+                    &simple_traverse, &ctx);
   SM_ASSERT(ctx.data[0] == 3);
   SM_ASSERT(ctx.data[1] == 5);
   SM_ASSERT(ctx.data[2] == 4);
@@ -93,12 +95,13 @@ void simple_reverse_postorder() {
   SM_ASSERT(ctx.data[5] == 0);
 }
 
-void simple_preorder() {
+void simple_preorder(void) {
   simple_traversal_ctx ctx = {.i = 0,
                               .data = {
                                   0,
                               }};
-  sm_itree_traverse(&simple_tree[0], SM_PREORDER, &simple_traverse, &ctx);
+  sm_itree_traverse((sm_itree *)&simple_tree[0], SM_PREORDER, &simple_traverse,
+                    &ctx);
   SM_ASSERT(ctx.data[0] == 0);
   SM_ASSERT(ctx.data[1] == 1);
   SM_ASSERT(ctx.data[2] == 2);
@@ -107,12 +110,13 @@ void simple_preorder() {
   SM_ASSERT(ctx.data[5] == 3);
 }
 
-void simple_reverse_preorder() {
+void simple_reverse_preorder(void) {
   simple_traversal_ctx ctx = {.i = 0,
                               .data = {
                                   0,
                               }};
-  sm_itree_traverse(&simple_tree[0], SM_REVERSE_PREORDER, &simple_traverse, &ctx);
+  sm_itree_traverse((sm_itree *)&simple_tree[0], SM_REVERSE_PREORDER,
+                    &simple_traverse, &ctx);
   SM_ASSERT(ctx.data[0] == 0);
   SM_ASSERT(ctx.data[1] == 3);
   SM_ASSERT(ctx.data[2] == 2);
@@ -121,12 +125,13 @@ void simple_reverse_preorder() {
   SM_ASSERT(ctx.data[5] == 1);
 }
 
-void simple_inorder() {
+void simple_inorder(void) {
   simple_traversal_ctx ctx = {.i = 0,
                               .data = {
                                   0,
                               }};
-  sm_itree_traverse(&simple_tree[0], SM_INORDER, &simple_traverse, &ctx);
+  sm_itree_traverse((sm_itree *)&simple_tree[0], SM_INORDER, &simple_traverse,
+                    &ctx);
   SM_ASSERT(ctx.data[0] == 1);
   SM_ASSERT(ctx.data[1] == 4);
   SM_ASSERT(ctx.data[2] == 2);
@@ -135,12 +140,13 @@ void simple_inorder() {
   SM_ASSERT(ctx.data[5] == 3);
 }
 
-void simple_reverse_inorder() {
+void simple_reverse_inorder(void) {
   simple_traversal_ctx ctx = {.i = 0,
                               .data = {
                                   0,
                               }};
-  sm_itree_traverse(&simple_tree[0], SM_REVERSE_INORDER, &simple_traverse, &ctx);
+  sm_itree_traverse((sm_itree *)&simple_tree[0], SM_REVERSE_INORDER,
+                    &simple_traverse, &ctx);
   SM_ASSERT(ctx.data[0] == 3);
   SM_ASSERT(ctx.data[1] == 5);
   SM_ASSERT(ctx.data[2] == 2);
@@ -149,7 +155,7 @@ void simple_reverse_inorder() {
   SM_ASSERT(ctx.data[5] == 1);
 }
 
-int main() {
+int main(void) {
   build_simple_tree();
   simple_postorder();
   simple_reverse_postorder();
@@ -157,5 +163,5 @@ int main() {
   simple_reverse_preorder();
   simple_inorder();
   simple_reverse_inorder();
-  sm_itree_cleanup(&simple_tree[0], NULL);
+  sm_itree_cleanup((sm_itree *)&simple_tree[0], NULL);
 }
