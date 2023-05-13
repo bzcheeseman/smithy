@@ -60,7 +60,7 @@ void sm_stream_encrypt(sm_stream_ctx *ctx, sm_buffer data);
 /// stream. The stream decryption must start on a block boundary, therefore this
 /// API will read data starting from:
 ///
-///   sm_buffer_begin(data) - (trunc(begin_offset / blocksize)) * blocksize`
+///   sm_buffer_begin(data) - (trunc(begin_offset / blocksize)) * blocksize
 ///
 /// This means that the caller MUST ensure that `data` is a valid alias of the
 /// actual cipher stream.
