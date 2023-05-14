@@ -1,5 +1,5 @@
 add_smithy_module(
-        NAME cache
-        SOURCES cache.c
-        DEPENDS stdlib
+  NAME cache
+  SOURCES cache.c
+  DEPENDS stdlib
 )
