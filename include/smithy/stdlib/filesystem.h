@@ -34,6 +34,9 @@ struct sm_file_ {
   sm_buffer (*map)(const sm_file *file, size_t size);
   void (*unmap)(const sm_buffer buf);
 
+  // Get the descriptor from the file. Returns -1 on error.
+  int (*descriptor)(const sm_file *file);
+
   // OS handle for the file, to be used by the implementation
   uint64_t handle;
 };

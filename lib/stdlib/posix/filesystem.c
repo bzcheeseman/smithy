@@ -136,6 +136,11 @@ void sm_fs_unmap(const sm_buffer buf) {
   munmap(sm_buffer_begin(buf), buf.length);
 }
 
+int sm_fs_descriptor(const sm_file *file) {
+  FILE *fptr = (FILE *)file->handle;
+  return fileno(fptr);
+}
+
 sm_file *sm_open(const char *path, const char *mode) {
   FILE *f = fopen(path, mode);
   if (f == NULL) {
@@ -152,6 +157,7 @@ sm_file *sm_open(const char *path, const char *mode) {
   out->size = &sm_fs_size;
   out->map = &sm_fs_map;
   out->unmap = &sm_fs_unmap;
+  out->descriptor = &sm_fs_descriptor;
   return out;
 }
 
@@ -175,6 +181,7 @@ sm_file *sm_stderr(void) {
   out->size = &sm_fs_size;
   out->map = &sm_fs_map;
   out->unmap = &sm_fs_unmap;
+  out->descriptor = &sm_fs_descriptor;
   return out;
 }
 
@@ -187,5 +194,6 @@ sm_file *sm_stdout(void) {
   out->size = &sm_fs_size;
   out->map = &sm_fs_map;
   out->unmap = &sm_fs_unmap;
+  out->descriptor = &sm_fs_descriptor;
   return out;
 }
