@@ -73,3 +73,20 @@ if (${SM_BUILD_THREADS})
   add_ctest(test_thread_pool smithy)
 endif ()
 
+if (${SM_BUILD_ELF})
+  # Use add_custom_target rather than add_custom_command because we want the
+  # test file to be up to date even when it changes.
+  add_custom_target(
+    test_elf_file
+    COMMAND ${CMAKE_C_COMPILER}
+      --target=aarch64-unknown-elf
+      -Xlinker --image-base=0x200000000
+      -nostdlib
+      -e main
+      -o ${CMAKE_CURRENT_BINARY_DIR}/resources/test.elf
+      ${CMAKE_CURRENT_SOURCE_DIR}/resources/test.c)
+
+  add_ctest(test_elf_loader smithy)
+  add_dependencies(test_elf_loader test_elf_file)
+endif ()
+

@@ -83,6 +83,7 @@ add_library(smithy STATIC
   $<$<BOOL:${SM_BUILD_CACHE}>:$<TARGET_OBJECTS:smithy-cache>>
   $<$<BOOL:${SM_BUILD_CRYPTO}>:$<TARGET_OBJECTS:smithy-crypto>>
   $<$<BOOL:${SM_BUILD_JSON}>:$<TARGET_OBJECTS:smithy-json>>
+  $<$<BOOL:${SM_BUILD_ELF}>:$<TARGET_OBJECTS:smithy-elf>>
   $<$<BOOL:${SM_BUILD_PARSER}>:$<TARGET_OBJECTS:smithy-parser>>
   $<$<BOOL:${SM_BUILD_THREADS}>:$<TARGET_OBJECTS:smithy-threads>>
   $<$<BOOL:${SM_BUILD_STDLIB}>:$<TARGET_OBJECTS:smithy-stdlib>>
