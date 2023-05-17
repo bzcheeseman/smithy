@@ -41,59 +41,69 @@ All modules are on by default, they can be turned off by passing the appropriate
 4. [`json`](#json)
 5. [`parser`](#parser)
 6. [`stdlib`](#stdlib)
-7. [`threads`](#threads)
+7. [`elf`](#elf)
+8. [`threads`](#threads)
 
 ## `authn`
 
-Provides JWT support
+Provides JWT support.
 
-Turn off with `-DSM_BUILD_AUTHN=OFF`
+Turn off with `-DSM_BUILD_AUTHN=OFF`.
 
-Requires `crypto`, `json` and `stdlib` modules
+Requires `crypto`, `json` and `stdlib` modules.
 
 ## `cache`
 
 Provides support for a write-through key-value cache.
 
-Turn off with `-DSM_BUILD_CACHE=OFF`
+Turn off with `-DSM_BUILD_CACHE=OFF`.
 
-Requires `stdlib` module
+Requires `stdlib` module.
 
 ## `crypto`
 
 Provides cryptography support using `bearssl`. Provides asymmetric encryption, symmetric encryption (authenticated and
 streaming).
 
-Turn off with `-DSM_BUILD_CRYPTO=OFF`
+Turn off with `-DSM_BUILD_CRYPTO=OFF`.
 
 - TODO: add rsa encrypt/decrypt
 - TODO: evaluate necessity of allowing the user to set an initial counter value
 
-Requires `stdlib` module
+Requires `stdlib` module.
 
 ## `json`
 
 Provides json support using `jansson`. Essentially just a wrapper to make it easier to use `sm_buffer` objects with JSON
 constructs.
 
-Turn off with `-DSM_BUILD_JSON=OFF`
+Turn off with `-DSM_BUILD_JSON=OFF`.
 
-Requires `stdlib` module
+Requires `stdlib` module.
 
 ## `parser`
 
 Provides a simple and generic parser/lexer for simple languages. Useful for defining config file formats or simple DSLs.
 
-Turn off with `-DSM_BUILD_PARSER=OFF`
+Turn off with `-DSM_BUILD_PARSER=OFF`.
 
-Requires `stdlib` module
+Requires `stdlib` module.
 
 ## `stdlib`
 
-Provides stdlib support - eventually should be enough to build most of smithy without libc
+Provides stdlib support - eventually should be enough to build most of smithy without libc.
 
-Turn off with `-DSM_BUILD_STDLIB=OFF`
-Turning this off will turn off all of smithy, so I don't recommend doing this
+Turn off with `-DSM_BUILD_STDLIB=OFF`.
+
+Turning this off will turn off all of smithy, so I don't recommend doing this.
+
+## `elf`
+
+Provides a simple ELF loader and (someday) linker.
+
+Turn off with `-DSM_BUILD_ELF=OFF`.
+
+Requires `stdlib` module.
 
 ## `threads`
 
@@ -105,4 +115,6 @@ Turn off with `-DSM_BUILD_THREADS=OFF`
 TODO: make threads fully capable of running with no OS?
 TODO: add select/poll functionality
 
-Useful bit-twiddling tricks: https://github.com/electronicarts/EAStdC/blob/master/include/EAStdC/EABitTricks.h
+### References
+- Useful bit-twiddling tricks: https://github.com/electronicarts/EAStdC/blob/master/include/EAStdC/EABitTricks.h
+- ELF file format: http://www.skyfree.org/linux/references/ELF_Format.pdf
