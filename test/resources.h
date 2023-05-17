@@ -24,10 +24,16 @@
 #error "must define path to testing resources"
 #endif
 
+#ifndef SMITHY_TEST_COMPILED_RESOURCE_PATH
+#error "must define path to compiled testing resources"
+#endif
+
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 
 #define TEST_RESOURCE(file) TOSTRING(SMITHY_TEST_RESOURCE_PATH) "/" file
+#define TEST_COMPILED_RESOURCE(file)                                           \
+  TOSTRING(SMITHY_TEST_COMPILED_RESOURCE_PATH) "/" file
 
 #define SM_DUMP_BUFFER_B64(buf)                                                \
   do {                                                                         \

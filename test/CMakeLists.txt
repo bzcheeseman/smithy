@@ -8,7 +8,9 @@ function(add_ctest test_name)
   add_executable(${test_name} EXCLUDE_FROM_ALL ${HELPERS} ${CMAKE_CURRENT_SOURCE_DIR}/${test_name}.c)
   # Inherits -fsanitize=address from top target
   target_compile_options(${test_name} PUBLIC -g -O0 -fPIC -fstack-protector-strong -Wall -fsanitize=address)
-  target_compile_definitions(${test_name} PRIVATE -DSMITHY_TEST_RESOURCE_PATH=${CMAKE_CURRENT_SOURCE_DIR}/resources)
+  target_compile_definitions(${test_name} PRIVATE
+    -DSMITHY_TEST_RESOURCE_PATH=${CMAKE_CURRENT_SOURCE_DIR}/resources
+    -DSMITHY_TEST_COMPILED_RESOURCE_PATH=${CMAKE_CURRENT_BINARY_DIR}/resources)
   if (${SM_SLOW_TESTS})
     target_compile_definitions(${test_name} PRIVATE -DSM_SLOW_TESTS)
   endif ()
@@ -26,7 +28,9 @@ function(add_fuzz_test test_name)
   add_executable(${test_name} EXCLUDE_FROM_ALL ${HELPERS} ${CMAKE_CURRENT_SOURCE_DIR}/${test_name}.c)
   # Inherits -fsanitize=address from top target
   target_compile_options(${test_name} PUBLIC -g -O0 -fPIC -fstack-protector-strong -Wall -fsanitize=fuzzer,address)
-  target_compile_definitions(${test_name} PRIVATE -DSMITHY_TEST_RESOURCE_PATH=${CMAKE_CURRENT_SOURCE_DIR}/resources)
+  target_compile_definitions(${test_name} PRIVATE
+    -DSMITHY_TEST_RESOURCE_PATH=${CMAKE_CURRENT_SOURCE_DIR}/resources
+    -DSMITHY_TEST_COMPILED_RESOURCE_PATH=${CMAKE_CURRENT_BINARY_DIR}/resources)
 
   target_link_libraries(${test_name} PRIVATE ${ARGN})
   target_link_libraries(${test_name} PRIVATE -fsanitize=fuzzer,address)
