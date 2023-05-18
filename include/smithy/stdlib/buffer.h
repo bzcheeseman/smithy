@@ -114,8 +114,10 @@ void sm_buffer_insert(sm_buffer *buf, uint8_t *pos, const uint8_t *first,
 /// Similar to std::fill. @last may be NULL, in which case it defaults to
 /// sm_buffer_end(buf)
 void sm_buffer_fill_rand(sm_buffer buf, uint8_t *pos, const uint8_t *last);
-/// Grows the buffer if newsize is larger than the current capacity, and sets
-/// buf->length = newsize
+/// Grows the buffer if newlen is larger than the current capacity, and sets
+/// buf->length = newlen. If newlen is less than the current length of `buf`, it
+/// memsets the overflow bytes to 0 but does not free them - this is valuable so
+/// that information in those bytes does not leak.
 void sm_buffer_resize(sm_buffer *buf, size_t newlen);
 /// Grows the buffer if newcap is larger than the current capacity. Does NOT
 /// reset buf->length.

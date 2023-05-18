@@ -132,6 +132,12 @@ void sm_buffer_fill_rand(sm_buffer buf, uint8_t *pos, const uint8_t *last) {
 
 void sm_buffer_resize(sm_buffer *buf, size_t newlen) {
   buffer_grow_(buf, newlen);
+
+  // If the new length is less than the full length of the buffer, memset those
+  // bytes to zero, but don't free them.
+  if (newlen < buf->length)
+    sm_memset(buf->data + newlen, 0, buf->length - newlen);
+
   buf->length = newlen;
 }
 
