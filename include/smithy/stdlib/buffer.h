@@ -110,8 +110,8 @@ uint8_t sm_buffer_pop(sm_buffer *buf);
 /// the buffer is empty, @pos must be NULL. Mimics std::vector::insert.
 void sm_buffer_insert(sm_buffer *buf, uint8_t *pos, const uint8_t *first,
                       const uint8_t *last);
-/// Fills the buffer with random data between first and last. Similar to
-/// std::fill. @last may be NULL, in which case it defaults to
+/// Fills the buffer with CSPRNG-generated random data between first and last.
+/// Similar to std::fill. @last may be NULL, in which case it defaults to
 /// sm_buffer_end(buf)
 void sm_buffer_fill_rand(sm_buffer buf, uint8_t *pos, const uint8_t *last);
 /// Grows the buffer if newsize is larger than the current capacity, and sets
