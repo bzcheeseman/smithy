@@ -44,10 +44,13 @@ bool sm_symmetric_key_init(sm_symmetric_key *key,
                            const sm_supported_symmetric algorithm,
                            const sm_buffer keybytes);
 
-/// Encrypt `crypt` in-place with `aad` and `key`. Random-initializes an IV and
-/// returns it in `iv`.
+/// Generate an IV according to the algorithm in `key`.
+void sm_generate_iv(const sm_symmetric_key *key, sm_buffer *iv);
+
+/// Encrypt `crypt` in-place with `aad` and `key`. Use `sm_generate_iv` to
+/// generate an IV suitable for use.
 void sm_symmetric_encrypt(const sm_symmetric_key *key, sm_buffer *crypt,
-                          const sm_buffer aad, sm_buffer *iv);
+                          const sm_buffer aad, const sm_buffer iv);
 /// Decrypt `crypt` in-place given `key`, `aad`, and `iv`.
 bool sm_symmetric_decrypt(const sm_symmetric_key *key, sm_buffer *crypt,
                           const sm_buffer aad, const sm_buffer iv);

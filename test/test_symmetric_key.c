@@ -29,7 +29,8 @@ void crypt(sm_buffer keybytes, sm_supported_symmetric algorithm) {
 
   SM_AUTO(sm_buffer) check = sm_buffer_clone(data);
   SM_AUTO(sm_buffer) iv = sm_empty_buffer;
-  sm_symmetric_encrypt(&k, &data, sm_empty_buffer, &iv);
+  sm_generate_iv(&k, &iv);
+  sm_symmetric_encrypt(&k, &data, sm_empty_buffer, iv);
 
   // Ensure the encryption changed the data
   sm_buffer msg_only =
@@ -53,7 +54,8 @@ void crypt_small(sm_buffer keybytes, sm_supported_symmetric algorithm) {
 
   SM_AUTO(sm_buffer) check = sm_buffer_clone(data);
   SM_AUTO(sm_buffer) iv = sm_empty_buffer;
-  sm_symmetric_encrypt(&k, &data, sm_empty_buffer, &iv);
+  sm_generate_iv(&k, &iv);
+  sm_symmetric_encrypt(&k, &data, sm_empty_buffer, iv);
 
   // Ensure the encryption changed the data
   sm_buffer msg_only =

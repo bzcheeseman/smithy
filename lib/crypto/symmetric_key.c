@@ -19,17 +19,19 @@
 
 #include <bearssl.h>
 
+static void setup_aes_iv(sm_buffer *iv) {
+  sm_buffer_resize(iv, 16);
+  sm_buffer_fill_rand(*iv, sm_buffer_begin(*iv), sm_buffer_end(*iv));
+}
+
 static void aes_gcm_encrypt(const sm_symmetric_key *key, sm_buffer *crypt,
-                            const sm_buffer aad, sm_buffer *iv) {
+                            const sm_buffer aad, const sm_buffer iv) {
   br_gcm_context gcm_ctx;
   br_gcm_init(&gcm_ctx, (const br_block_ctr_class **)&key->k.aes,
               &br_ghash_ctmul64);
 
-  // Get a secure random IV
-  sm_buffer_resize(iv, 16);
-  sm_buffer_fill_rand(*iv, sm_buffer_begin(*iv), sm_buffer_end(*iv));
   // Setup the IV
-  br_gcm_reset(&gcm_ctx, sm_buffer_begin(*iv), sm_buffer_length(*iv));
+  br_gcm_reset(&gcm_ctx, sm_buffer_begin(iv), sm_buffer_length(iv));
   // Inject AAD
   br_gcm_aad_inject(&gcm_ctx, sm_buffer_begin(aad), sm_buffer_length(aad));
   // Prepare for crypto
@@ -74,9 +76,14 @@ static bool aes_gcm_decrypt(const sm_symmetric_key *key, sm_buffer *crypt,
   return true;
 }
 
+static void setup_chacha_iv(sm_buffer *iv) {
+  sm_buffer_resize(iv, 12);
+  sm_buffer_fill_rand(*iv, sm_buffer_begin(*iv), sm_buffer_end(*iv));
+}
+
 static void chacha20_poly1305_encrypt(const sm_symmetric_key *key,
                                       sm_buffer *crypt, const sm_buffer aad,
-                                      sm_buffer *iv) {
+                                      const sm_buffer iv) {
   br_poly1305_run runner = br_poly1305_ctmulq_get();
   if (!runner) {
     runner = br_poly1305_ctmul_run;
@@ -87,15 +94,11 @@ static void chacha20_poly1305_encrypt(const sm_symmetric_key *key,
     chacha_impl = br_chacha20_ct_run;
   }
 
-  // Get a secure random IV
-  sm_buffer_resize(iv, 12);
-  sm_buffer_fill_rand(*iv, sm_buffer_begin(*iv), sm_buffer_end(*iv));
-
-  // Resize the crypt buffer to add space for the tag
+  // Resize the crypt buffer to add space for the tag.
   size_t message_len = sm_buffer_length(*crypt);
   sm_buffer_resize(crypt, message_len + 16);
 
-  runner(key->k.chacha, sm_buffer_begin(*iv), sm_buffer_begin(*crypt),
+  runner(key->k.chacha, sm_buffer_begin(iv), sm_buffer_begin(*crypt),
          message_len, sm_buffer_begin(aad), sm_buffer_length(aad),
          sm_buffer_begin(*crypt) + message_len, chacha_impl, 1);
 }
@@ -154,6 +157,19 @@ static size_t get_key_size_bytes(const sm_supported_symmetric algorithm) {
   return SIZE_MAX;
 }
 
+void sm_generate_iv(const sm_symmetric_key *key, sm_buffer *iv) {
+  switch (key->algorithm) {
+  case SM_AES_128_GCM:
+  case SM_AES_192_GCM:
+  case SM_AES_256_GCM:
+    setup_aes_iv(iv);
+    break;
+  case SM_CHACHA20_POLY1305:
+    setup_chacha_iv(iv);
+    break;
+  }
+}
+
 bool sm_symmetric_key_init(sm_symmetric_key *key,
                            const sm_supported_symmetric algorithm,
                            const sm_buffer keybytes) {
@@ -191,7 +207,7 @@ bool sm_symmetric_key_init(sm_symmetric_key *key,
 }
 
 void sm_symmetric_encrypt(const sm_symmetric_key *key, sm_buffer *crypt,
-                          const sm_buffer aad, sm_buffer *iv) {
+                          const sm_buffer aad, const sm_buffer iv) {
   switch (key->algorithm) {
   case SM_AES_128_GCM: // fallthrough
   case SM_AES_192_GCM: // fallthrough
