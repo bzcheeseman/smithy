@@ -56,8 +56,10 @@ bool sm_symmetric_decrypt(const sm_symmetric_key *key, sm_buffer *crypt,
                           const sm_buffer aad, const sm_buffer iv);
 
 /// Takes a master key and some input bytes and deterministically produces a
-/// sub-key according to NIST SP 800-108. Here `input` is Label || 0x00 ||
-/// Context from the NIST specification. The rest is handled internally.
+/// sub-key according to NIST SP 800-108r1, using the counter construction. The
+/// additional guard that uses `K(0)` as described in the publication is
+/// applied internally. Here `input` is Label || 0x00 || Context from the NIST
+/// specification. The rest is handled internally.
 void sm_keybytes_from_master(const sm_buffer master, const sm_buffer input,
                              const sm_supported_symmetric algorithm,
                              sm_buffer *key);

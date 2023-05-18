@@ -241,28 +241,32 @@ bool sm_symmetric_decrypt(const sm_symmetric_key *key, sm_buffer *crypt,
 void sm_keybytes_from_master(const sm_buffer master, const sm_buffer input,
                              const sm_supported_symmetric algorithm,
                              sm_buffer *key) {
-  // digest length in bytes - we always use SHA-256
+  // Digest length in bytes - we always use SHA-256.
   size_t digestbytes = 32;
-  // digestlen should be in bits
   size_t digestbits = digestbytes * 8;
 
   // Get the number of bits required for the key
   uint32_t keybytes = get_key_size_bytes(algorithm);
   uint32_t keybits = keybytes * 8;
 
-  // Number of times to perform the HMAC operation
-  size_t rounds = keybits / digestbits + (keybits % digestbits != 0);
+  // Number of times to perform the HMAC operation - ceil(L, h) so that we
+  // always get at least one round.
+  size_t rounds = (keybits + digestbits - 1) / digestbits;
+  if (rounds > ((1ull << 32ull) - 1))
+    SM_FATAL("Too many rounds required, capped at 2^32 - 1.\n");
 
-  // The input to the HMAC
-  size_t input_bytes_len =
-      sizeof(uint32_t) + sm_buffer_length(input) + sizeof(uint32_t);
-  uint8_t input_bytes[input_bytes_len];
+  // The input to the HMAC for rounds 1-N.
+  size_t input_bytes_len = sizeof(uint32_t) + sm_buffer_length(input) +
+                           sizeof(uint32_t) + digestbytes;
+  SM_AUTO(sm_buffer) input_bytes = sm_empty_buffer;
+  sm_buffer_resize(&input_bytes, input_bytes_len);
 
-  // Copy over the input data and the desired key bits (NIST SP 800-108)
-  memcpy(input_bytes + sizeof(uint32_t), sm_buffer_begin(input),
-         sm_buffer_length(input));
-  memcpy(input_bytes + sizeof(uint32_t) + sm_buffer_length(input), &keybits,
-         sizeof(uint32_t));
+  // Copy over the input data and the desired key bits (L) (NIST SP 800-108r1)
+  sm_memcpy(sm_buffer_begin(input_bytes) + sizeof(uint32_t),
+            sm_buffer_begin(input), sm_buffer_length(input));
+  sm_memcpy(sm_buffer_begin(input_bytes) + sizeof(uint32_t) +
+                sm_buffer_length(input),
+            &keybits, sizeof(uint32_t));
 
   // Get the data out of the master key for the HMAC
   const size_t master_keylen = sm_buffer_length(master);
@@ -276,25 +280,43 @@ void sm_keybytes_from_master(const sm_buffer master, const sm_buffer input,
   br_hmac_context hmac_ctx;
   br_hmac_init(&hmac_ctx, &hmac_key_ctx, 0);
 
-  // Allocate the correct amount of memory for the output bytes
-  uint8_t output_bytes[rounds * digestbytes];
-  for (size_t i = 0; i < rounds; ++i) {
-    // Copy over the count (NIST SP 800-108)
-    memcpy(input_bytes, &i, sizeof(uint32_t));
+  // Add the guard against a party with knowledge of the master key, and the
+  // ability to select portions of the input that uses K(0). This essentially
+  // performs the first iteration, and then for subsequent iterations, uses that
+  // iteration as part of the input.
+  size_t i = 0;
+  sm_memcpy(sm_buffer_begin(input_bytes), &i, sizeof(uint32_t));
+
+  // The input bytes for K0 are i | input_bytes | L. We then write the result to
+  // the end of the input bytes we're going to use for subsequent rounds.
+  size_t K0_input_bytes = input_bytes_len - digestbytes;
+  size_t bytes = br_hmac_outCT(&hmac_ctx, sm_buffer_begin(input_bytes),
+                               K0_input_bytes, K0_input_bytes, K0_input_bytes,
+                               sm_buffer_begin(input_bytes) + K0_input_bytes);
+  SM_ASSERT(bytes == digestbytes);
+
+  // Allocate the correct amount of memory for the output bytes. It's always
+  // rounds * digestbytes.
+  SM_AUTO(sm_buffer) output_bytes = sm_empty_buffer;
+  sm_buffer_resize(&output_bytes, rounds * digestbytes);
+  // The specification says run from 1 to n, and concatenate those results
+  // together.
+  for (i = 1; i <= rounds; ++i) {
+    // Copy over the count (NIST SP 800-108r1).
+    sm_memcpy(sm_buffer_begin(input_bytes), &i, sizeof(uint32_t));
 
     // Do the HMAC - and write the hmac output into the correct place in the
-    // output
-    size_t bytes =
-        br_hmac_outCT(&hmac_ctx, input_bytes, input_bytes_len, input_bytes_len,
-                      input_bytes_len, output_bytes + (i * digestbytes));
+    // output directly.
+    bytes =
+        br_hmac_outCT(&hmac_ctx, sm_buffer_begin(input_bytes), input_bytes_len,
+                      input_bytes_len, input_bytes_len,
+                      sm_buffer_begin(output_bytes) + ((i - 1) * digestbytes));
     SM_ASSERT(bytes == digestbytes);
   }
 
-  // The output is the leftmost L bits of result(n)
-  uint8_t *out_bytes = output_bytes + ((rounds - 1) * digestbytes);
-
-  // Get the first keylen bytes and use them for the key
-  sm_buffer_insert(key, sm_buffer_begin(*key), out_bytes, out_bytes + keybytes);
+  // Get the first L bits (keybytes) bytes and use them for the key.
+  sm_buffer_insert(key, sm_buffer_begin(*key), sm_buffer_begin(output_bytes),
+                   sm_buffer_begin(output_bytes) + keybytes);
 }
 
 void sm_keybytes_from_password(const sm_buffer password,
@@ -334,9 +356,9 @@ void sm_keybytes_from_password(const sm_buffer password,
     sm_buffer_fill_rand(*salt, sm_buffer_begin(*salt), sm_buffer_end(*salt));
   }
 
-  // This is U_0
+  // The salt is U_0.
   SM_AUTO(sm_buffer) u_0 = sm_buffer_clone(*salt);
-  // Insert big-endian 1 (i is a 1-based index)
+  // Insert big-endian 1 (i is a 1-based index).
   uint32_t one = htonl(1);
   sm_buffer_insert(&u_0, sm_buffer_end(u_0), (uint8_t *)&one,
                    (uint8_t *)&one + sizeof(uint32_t));
@@ -345,11 +367,11 @@ void sm_keybytes_from_password(const sm_buffer password,
   uint8_t u_right[32];
   uint8_t f_buf[32];
 
-  // Do the first hmac and output into U_1
+  // Do the first hmac and output into U_1.
   br_hmac_outCT(&hmac_ctx, sm_buffer_begin(u_0), sm_buffer_length(u_0),
                 sm_buffer_length(u_0), sm_buffer_length(u_0), u_left);
 
-  // Single iteration
+  // Single iteration.
   if (iterations == 1) {
     sm_buffer_insert(key, sm_buffer_begin(*key), u_left, u_left + 32);
     return;
@@ -358,7 +380,7 @@ void sm_keybytes_from_password(const sm_buffer password,
   uint8_t *u_input = u_left;
   uint8_t *u_output = u_right;
   // Copy U_1 into the final buffer
-  memcpy(f_buf, u_input, 32);
+  sm_memcpy(f_buf, u_input, 32);
   for (size_t i = 1; i < iterations; ++i) {
     // Do the hmac, taking from the previous and placing it into the current
     // one.
@@ -375,8 +397,8 @@ void sm_keybytes_from_password(const sm_buffer password,
     // Swap input and output
     uint8_t *tmp = u_output;
     u_output = u_input;
-    u_input =
-        tmp; // the input to the next round is just the output of this round
+    // The input to the next round is just the output of this round.
+    u_input = tmp;
   }
 
   sm_buffer_insert(key, sm_buffer_begin(*key), (uint8_t *)&f_buf,
