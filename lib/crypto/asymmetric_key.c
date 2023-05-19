@@ -16,6 +16,8 @@
 
 #include "smithy/crypto/asymmetric_key.h"
 #include "smithy/crypto/der.h"
+#include "smithy/crypto/symmetric_key.h"
+#include "smithy/stdlib/memory.h"
 
 #include <time.h>
 #include <unistd.h>
@@ -129,7 +131,7 @@ bool sm_create_rsa_keypair(uint16_t bits, br_rsa_private_key *priv,
 }
 
 void sm_ec_keypair_cleanup(const br_ec_private_key *priv,
-                        const br_ec_public_key *pub) {
+                           const br_ec_public_key *pub) {
   if (priv) {
     SM_AUTO(sm_buffer) x = sm_buffer_alias(priv->x, priv->xlen);
     (void)x;
@@ -142,7 +144,7 @@ void sm_ec_keypair_cleanup(const br_ec_private_key *priv,
 }
 
 void sm_rsa_keypair_cleanup(const br_rsa_private_key *priv,
-                         const br_rsa_public_key *pub) {
+                            const br_rsa_public_key *pub) {
   // For both of these keys all the elements are stored in a single buffer,
   // which is why we only have to free the first field.
 
@@ -834,7 +836,9 @@ bool sm_ec_keyx(const br_ec_private_key *me, const br_ec_public_key *peer,
 
   const br_ec_impl *impl = br_ec_get_default();
   sm_buffer peer_pubkey = sm_buffer_alias(peer->q, peer->qlen);
-  sm_buffer tmp = sm_buffer_clone(peer_pubkey);
+  // Use `tmp` as a buffer that we can write the result of the multiplication
+  // into. We want it gone when this scope ends.
+  SM_AUTO(sm_buffer) tmp = sm_buffer_clone(peer_pubkey);
 
   // ECDH is literally just multiplying the two points together (openssl
   // makes this super complicated)
@@ -850,7 +854,7 @@ bool sm_ec_keyx(const br_ec_private_key *me, const br_ec_public_key *peer,
   // The integer to bytes conversion is just ensuring it's big-endian and
   // padded to 8 bits, which we already have.
 
-  // Then we take the SHA256 of this thing
+  // Then we take the SHA256 of this thing to get a shared secret we can use.
   br_sha256_context ctx;
   br_sha256_init(&ctx);
   br_sha256_update(&ctx, sm_buffer_begin(tmp), sm_buffer_length(tmp));
@@ -859,4 +863,262 @@ bool sm_ec_keyx(const br_ec_private_key *me, const br_ec_public_key *peer,
   br_sha256_out(&ctx, sm_buffer_begin(*shared_secret));
 
   return (mulres == 1);
+}
+
+bool sm_rsa_encrypt(const br_rsa_public_key *pub, const sm_buffer buf,
+                    const sm_buffer label, sm_buffer *ciphertext) {
+  // Before doing anything, check that the message is small enough to be
+  // encrypted effectively. The standard says:
+  //   mLen <= k - 2*hLen - 2
+  //   mLen == message length in octets (bytes)
+  //   k    == rsa modulus length in octets (bytes)
+  //   hLen == hash function output length in octets (bytes)
+  // Since we use SHA256 here, hLen == 32.
+  if (buf.length > (pub->nlen - 2 * 32 - 2)) {
+    SM_ERROR("Message was too long, got %zu bytes but cannot encrypt more than "
+             "%zu bytes\n",
+             buf.length, (pub->nlen - 2 * 32 - 2));
+    return false;
+  }
+
+  br_rsa_oaep_encrypt enc = br_rsa_oaep_encrypt_get_default();
+
+  br_hmac_drbg_context rng_ctx;
+  SM_AUTO(sm_buffer) seed = sm_empty_buffer;
+
+  // TODO: this is for 256 bit security, does it need to be longer?
+  sm_buffer_resize(&seed, 48);
+  sm_buffer_fill_rand(seed, sm_buffer_begin(seed), sm_buffer_end(seed));
+  br_hmac_drbg_init(&rng_ctx, &br_sha512_vtable, sm_buffer_begin(seed),
+                    seed.length);
+
+  // The buffer must be exactly the size of the modulus.
+  sm_buffer_resize(ciphertext, pub->nlen);
+
+  size_t ciphertext_bytes =
+      enc(&rng_ctx.vtable, &br_sha256_vtable, label.data, label.length, pub,
+          ciphertext->data, ciphertext->length, buf.data, buf.length);
+  if (ciphertext_bytes == 0) {
+    SM_ERROR("Encrypting the message failed\n");
+    return false;
+  }
+
+  // Truncate to the actual number of bytes needed.
+  sm_buffer_resize(ciphertext, ciphertext_bytes);
+  return true;
+}
+
+bool sm_rsa_decrypt(const br_rsa_private_key *priv, sm_buffer *crypt,
+                    const sm_buffer label) {
+  if (crypt->length != (priv->n_bitlen / 8)) {
+    SM_ERROR("Message cannot be an RSA encrypted message.\n");
+    return false;
+  }
+
+  br_rsa_oaep_decrypt dec = br_rsa_oaep_decrypt_get_default();
+
+  size_t len = crypt->length;
+  if (0 == dec(&br_sha256_vtable, label.data, label.length, priv, crypt->data,
+               &len)) {
+    SM_ERROR("Decrypting the message failed\n");
+    return false;
+  }
+
+  // Resize the buffer to the message length.
+  sm_buffer_resize(crypt, len);
+  return true;
+}
+
+//=====-----------------------------------------------------------------=====//
+// Type-generic Asymmetric Encrypt/Decrypt
+//=====-----------------------------------------------------------------=====//
+
+bool sm_create_asymmetric_keypair(uint16_t bits_or_curve,
+                                  sm_asymmetric_private_key *priv,
+                                  sm_asymmetric_public_key *pub) {
+  bool is_ec = bits_or_curve < 2048;
+  if (is_ec) {
+    priv->kind = BR_KEYTYPE_EC;
+    pub->kind = BR_KEYTYPE_EC;
+    return sm_create_ec_keypair((sm_supported_curve)bits_or_curve, &priv->ec,
+                                &pub->ec);
+  }
+
+  priv->kind = BR_KEYTYPE_RSA;
+  pub->kind = BR_KEYTYPE_RSA;
+  return sm_create_rsa_keypair(bits_or_curve, &priv->rsa, &pub->rsa);
+}
+
+bool sm_asymmetric_encrypt(sm_asymmetric_private_key *me,
+                           sm_asymmetric_public_key *peer,
+                           const sm_buffer plaintext, sm_buffer *ciphertext,
+                           sm_buffer *aad) {
+  if (me->kind != peer->kind) {
+    SM_ERROR("Key kinds did not match, cannot proceed.\n");
+    return false;
+  }
+
+  // Set up the buffer we'll use to store the symmetric key bytes we're going to
+  // use.
+  SM_AUTO(sm_buffer) keybytes = sm_empty_buffer;
+
+  // Construct an AAD that contains:
+  //  - The salt for the PBKDF, or the encrypted symmetric key.
+  //  - The IV for the symmetric encryption
+  // The format is DER: SEQ(OCTET_STRING, OCTET_STRING)
+
+  SM_AUTO(sm_der_node) root;
+  sm_der_begin(SM_DER_CONSTRUCTED(SM_DER_TYPE_SEQUENCE), &root);
+
+  SM_AUTO(sm_der_node) first_node;
+  sm_der_add(SM_DER_TYPE_OCTET_STRING, &first_node, &root);
+
+  // If the key kind is EC, compute a shared secret and use that to construct a
+  // symmetric key to use for encryption.
+  if (peer->kind == BR_KEYTYPE_EC) {
+    SM_AUTO(sm_buffer) shared_secret = sm_empty_buffer;
+    if (!sm_ec_keyx(&me->ec, &peer->ec, &shared_secret)) {
+      SM_ERROR("Computing the shared secret failed.\n");
+      return false;
+    }
+
+    // Use a PBKDF on the shared secret to ensure it's valid to use as an
+    // encryption key.
+    SM_AUTO(sm_buffer) salt = sm_empty_buffer;
+    sm_keybytes_from_password(shared_secret, 10000, SM_CHACHA20_POLY1305, &salt,
+                              &keybytes);
+
+    // The first node contains the salt, in this case.
+    sm_der_encode_buffer(salt, &first_node);
+  } else if (peer->kind == BR_KEYTYPE_RSA) {
+    // Create a random key using the CSPRNG.
+    sm_buffer_resize(&keybytes, 32);
+    sm_buffer_fill_rand(keybytes, sm_buffer_begin(keybytes),
+                        sm_buffer_end(keybytes));
+
+    // Encrypt this key with the RSA key of the recipient.
+    SM_AUTO(sm_buffer) encrypted_key = sm_empty_buffer;
+    sm_rsa_encrypt(&peer->rsa, keybytes, sm_buffer_alias_str("encryption_key"),
+                   &encrypted_key);
+
+    // The first node contains the encrypted key, in this case.
+    sm_der_encode_buffer(encrypted_key, &first_node);
+  } else {
+    SM_ERROR("Unknown key type\n");
+    return false;
+  }
+
+  sm_symmetric_key key;
+  if (!sm_symmetric_key_init(&key, SM_CHACHA20_POLY1305, keybytes)) {
+    SM_ERROR("Failed to initialize the symmetric key.\n");
+    return false;
+  }
+
+  // Symmetric encryption always takes an IV.
+  SM_AUTO(sm_buffer) iv = sm_empty_buffer;
+  sm_generate_iv(&key, &iv);
+
+  SM_AUTO(sm_der_node) iv_node;
+  sm_der_add(SM_DER_TYPE_OCTET_STRING, &iv_node, &root);
+  sm_der_encode_buffer(iv, &iv_node);
+
+  SM_AUTO(sm_buffer) aad_buf = sm_empty_buffer;
+  sm_der_serialize(&root, &aad_buf);
+
+  // Now we have to add the AAD to the buffer provided by the user. Add it at
+  // the beginning, so that the DER parser will pull it out - DER is
+  // self-delimiting.
+  uint64_t bufferlen = aad_buf.length;
+  // Insert the length first.
+  sm_buffer_insert(aad, sm_buffer_begin(*aad), (uint8_t *)&bufferlen,
+                   (uint8_t *)&bufferlen + sizeof(uint64_t));
+  // Then insert the DER encoded data after that.
+  sm_buffer_insert(aad, sm_buffer_begin(*aad) + sizeof(uint64_t),
+                   sm_buffer_begin(aad_buf), sm_buffer_end(aad_buf));
+
+  // Copy the plaintext into the ciphertext - symmetric encryption happens
+  // in-place.
+  sm_buffer_copy(plaintext, ciphertext);
+
+  // Now we can encrypt with the full AAD buffer.
+  sm_symmetric_encrypt(&key, ciphertext, *aad, iv);
+
+  return true;
+}
+
+bool sm_asymmetric_decrypt(sm_asymmetric_private_key *me,
+                           sm_asymmetric_public_key *peer,
+                           const sm_buffer ciphertext, sm_buffer *aad,
+                           sm_buffer *plaintext) {
+  if (me->kind != peer->kind) {
+    SM_ERROR("Key kinds did not match, cannot proceed.\n");
+    return false;
+  }
+
+  // Pull the DER encoded salt and IV from the AAD buffer.
+  uint64_t der_len = 0;
+  sm_memcpy(&der_len, sm_buffer_begin(*aad), sizeof(uint64_t));
+  // This is the total length of the DER prefix for the AAD buffer. Use that to
+  // pull out the original aad buffer and the DER.
+  size_t der_prefix_len = sizeof(uint64_t) + der_len;
+  sm_buffer original_aad_buffer =
+      sm_buffer_alias(aad->data + der_prefix_len, aad->length - der_prefix_len);
+  sm_buffer der = sm_buffer_alias(aad->data + sizeof(uint64_t), der_len);
+
+  SM_AUTO(sm_der_node) root;
+  sm_der_deserialize(der, &root);
+
+  sm_der_node *first_node = sm_der_get_child(&root, 0);
+  SM_AUTO(sm_buffer) keybytes = sm_empty_buffer;
+  if (me->kind == BR_KEYTYPE_EC) {
+    // The first node contains the salt in this case.
+    sm_buffer salt = first_node->data;
+
+    // Compute a shared secret and decrypt with that.
+    SM_AUTO(sm_buffer) shared_secret = sm_empty_buffer;
+    if (!sm_ec_keyx(&me->ec, &peer->ec, &shared_secret)) {
+      SM_ERROR("Computing the shared secret failed.\n");
+      return false;
+    }
+
+    // Use a PBKDF on the shared secret to ensure it's valid to use as an
+    // encryption key.
+    sm_keybytes_from_password(shared_secret, 10000, SM_CHACHA20_POLY1305, &salt,
+                              &keybytes);
+  } else if (me->kind == BR_KEYTYPE_RSA) {
+    // The first node is the encrypted symmetric key. Decrypt it into
+    // `keybytes`.
+    sm_buffer_copy(first_node->data, &keybytes);
+    sm_rsa_decrypt(&me->rsa, &keybytes, sm_buffer_alias_str("encryption_key"));
+  } else {
+    SM_ERROR("Unknown key type\n");
+    return false;
+  }
+
+  sm_symmetric_key key;
+  if (!sm_symmetric_key_init(&key, SM_CHACHA20_POLY1305, keybytes)) {
+    SM_ERROR("Failed to initialize the symmetric key.\n");
+    return false;
+  }
+
+  sm_der_node *iv_node = sm_der_get_child(&root, 1);
+  sm_buffer iv = iv_node->data;
+
+  // Copy the ciphertext into the plaintext - symmetric encryption happens
+  // in-place.
+  sm_buffer_copy(ciphertext, plaintext);
+
+  if (!sm_symmetric_decrypt(&key, plaintext, *aad, iv)) {
+    SM_ERROR("Symmetric decryption failed.\n");
+    return false;
+  }
+
+  // Copy the original AAD out of the aad buffer, clear it out, and re-insert
+  // it. Because the DER-encoded stuff is at the beginning, there's not really a
+  // good way to drop it.
+  SM_AUTO(sm_buffer) original_aad = sm_buffer_clone(original_aad_buffer);
+  sm_buffer_clear(aad);
+  sm_buffer_copy(original_aad, aad);
+
+  return true;
 }

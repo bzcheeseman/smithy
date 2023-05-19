@@ -87,3 +87,92 @@ bool sm_rsa_get_csr(const br_rsa_private_key *priv,
 /// Performs an ECDH key exchange and returns a shared secret
 bool sm_ec_keyx(const br_ec_private_key *me, const br_ec_public_key *peer,
                 sm_buffer *shared_secret);
+
+/// Encrypts `buf` with `pub` and places the result in `ciphertext`. `label`
+/// optionally contains data that should be bound to the ciphertext but that
+/// does NOT need to be encrypted.
+bool sm_rsa_encrypt(const br_rsa_public_key *pub, const sm_buffer buf,
+                    const sm_buffer label, sm_buffer *ciphertext);
+
+/// Decrypts `ciphertext` in-place with `priv`. `label` optionally contains data
+/// that should be bound to the ciphertext but that does NOT need to be
+/// encrypted. It must be the same value passed into the encrypt method.
+bool sm_rsa_decrypt(const br_rsa_private_key *priv, sm_buffer *crypt,
+                    const sm_buffer label);
+
+//=====-----------------------------------------------------------------=====//
+// Type-generic Asymmetric Encrypt/Decrypt
+//=====-----------------------------------------------------------------=====//
+
+/// Tagged union that contains either an EC key or a RSA private key.
+typedef struct {
+  union {
+    br_rsa_private_key rsa;
+    br_ec_private_key ec;
+  };
+  /// This field is either BR_KEYTYPE_RSA or BR_KEYTYPE_EC.
+  uint8_t kind;
+} sm_asymmetric_private_key;
+
+/// Needed for the SM_AUTO macro.
+static inline void
+free_sm_asymmetric_private_key(const sm_asymmetric_private_key *p) {
+  if (p->kind == BR_KEYTYPE_EC)
+    sm_ec_keypair_cleanup(&p->ec, NULL);
+  else
+    sm_rsa_keypair_cleanup(&p->rsa, NULL);
+}
+
+/// Tagged union that contains either an EC key or a RSA public key.
+typedef struct {
+  union {
+    br_rsa_public_key rsa;
+    br_ec_public_key ec;
+  };
+  /// This field is either BR_KEYTYPE_RSA or BR_KEYTYPE_EC.
+  uint8_t kind;
+} sm_asymmetric_public_key;
+
+/// Needed for the SM_AUTO macro.
+static inline void
+free_sm_asymmetric_public_key(const sm_asymmetric_public_key *p) {
+  if (p->kind == BR_KEYTYPE_EC)
+    sm_ec_keypair_cleanup(NULL, &p->ec);
+  else
+    sm_rsa_keypair_cleanup(NULL, &p->rsa);
+}
+
+/// Create an asymmetric keypair. If `bits_or_curve` is less than 2048 then it's
+/// assumed to be a curve - one of {SM_P256 == 0, SM_P384 == 1, SM_P521 == 2},
+/// to be exact.
+bool sm_create_asymmetric_keypair(uint16_t bits_or_curve,
+                                  sm_asymmetric_private_key *priv,
+                                  sm_asymmetric_public_key *pub);
+
+/// Type-generic encryption for a given asymmetric key. This function internally
+/// uses what OpenSSL calls 'envelope' encryption, which means that it always
+/// generates a symmetric key and encrypts the data with that symmetric key. For
+/// EC keys, it uses `sm_ec_keyx` above to compute a shared secret, then passes
+/// that through a PBKDF. The salt is placed into the AAD buffer along with the
+/// IV used for the actual data encryption. For RSA keys, a new key is generated
+/// from random bytes and encrypted with the public key of the peer. That
+/// encrypted key is added to the AAD buffer, along with the IV used for the
+/// actual data encryption. The user may provide any AAD required - this
+/// function will write the additional data needed for decryption
+/// (salt/encrypted key and IV) to the beginning of the buffer in DER-encoded
+/// form.
+bool sm_asymmetric_encrypt(sm_asymmetric_private_key *me,
+                           sm_asymmetric_public_key *peer,
+                           const sm_buffer plaintext, sm_buffer *ciphertext,
+                           sm_buffer *aad);
+
+/// Type-generic decryption for a given asymmetric key. This function will
+/// unwrap the AAD in order to perform decryption - either computing the shared
+/// secret and computing the PBKDF for EC keys, or reading and decrypting the
+/// encrypted symmetric key. This function modifies `aad` to strip out the
+/// additional data added by the encryption function, to ensure the user is able
+/// to recover their data exactly.
+bool sm_asymmetric_decrypt(sm_asymmetric_private_key *me,
+                           sm_asymmetric_public_key *peer,
+                           const sm_buffer ciphertext, sm_buffer *aad,
+                           sm_buffer *plaintext);

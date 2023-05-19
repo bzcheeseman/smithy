@@ -20,7 +20,7 @@
 #include "smithy/crypto/asymmetric_key.h"
 #include "smithy/stdlib/b64.h"
 
-void ec() {
+void ec(void) {
   SM_AUTO(br_ec_private_key) priv;
   SM_AUTO(br_ec_public_key) pub;
 
@@ -48,7 +48,7 @@ void ec() {
   SM_ASSERT(sm_buffer_equal(priv_alias, repl_x));
 }
 
-void rsa() {
+void rsa(void) {
   SM_AUTO(br_rsa_private_key) priv;
   SM_AUTO(br_rsa_public_key) pub;
 
@@ -83,7 +83,7 @@ void rsa() {
   SM_ASSERT(sm_buffer_equal(iq, r_iq));
 }
 
-void ec_cert() {
+void ec_cert(void) {
   SM_AUTO(br_ec_private_key) priv;
   SM_AUTO(br_ec_public_key) pub;
 
@@ -108,7 +108,7 @@ void ec_cert() {
   SM_ASSERT(sm_buffer_equal(pub_alias, repl_q));
 }
 
-void rsa_cert() {
+void rsa_cert(void) {
   SM_AUTO(br_rsa_private_key) priv;
   SM_AUTO(br_rsa_public_key) pub;
 
@@ -139,7 +139,7 @@ void rsa_cert() {
 // verify by adding the desired function to main and running the test
 // executable. The CSR printed can be piped to: openssl req -text -noout
 
-void ec_csr() {
+void ec_csr(void) {
   SM_AUTO(br_ec_private_key) priv;
   SM_AUTO(br_ec_public_key) pub;
 
@@ -164,7 +164,7 @@ void ec_csr() {
   printf("\n-----END CERTIFICATE REQUEST-----\n");
 }
 
-void rsa_csr() {
+void rsa_csr(void) {
   SM_AUTO(br_rsa_private_key) priv;
   SM_AUTO(br_rsa_public_key) pub;
 
@@ -189,7 +189,172 @@ void rsa_csr() {
   printf("\n-----END CERTIFICATE REQUEST-----\n");
 }
 
-int main() {
+void rsa_crypt_nolabel(void) {
+  SM_AUTO(br_rsa_private_key) priv;
+  SM_AUTO(br_rsa_public_key) pub;
+
+  sm_create_rsa_keypair(2048, &priv, &pub);
+
+  SM_AUTO(sm_buffer) plaintext = sm_empty_buffer;
+  SM_AUTO(sm_buffer) ciphertext = sm_empty_buffer;
+
+  // This is too big, but use it to ensure we get the error we expect.
+  sm_buffer_resize(&plaintext, 256);
+  sm_buffer_fill_rand(plaintext, sm_buffer_begin(plaintext),
+                      sm_buffer_end(plaintext));
+
+  SM_INFO("Expected error: ");
+  SM_ASSERT(!sm_rsa_encrypt(&pub, plaintext, sm_empty_buffer, &ciphertext));
+
+  // Now resize it to the correct size.
+  sm_buffer_resize(&plaintext, 32);
+  SM_ASSERT(sm_rsa_encrypt(&pub, plaintext, sm_empty_buffer, &ciphertext));
+
+  // Check that it wasn't a no-op.
+  SM_ASSERT(!sm_buffer_equal(plaintext, ciphertext));
+
+  // And ensure it decrypts properly.
+  SM_ASSERT(sm_rsa_decrypt(&priv, &ciphertext, sm_empty_buffer));
+
+  // Ensure they're exactly equal.
+  SM_ASSERT(sm_buffer_equal(plaintext, ciphertext));
+}
+
+void rsa_crypt_withlabel(void) {
+  SM_AUTO(br_rsa_private_key) priv;
+  SM_AUTO(br_rsa_public_key) pub;
+
+  sm_create_rsa_keypair(2048, &priv, &pub);
+
+  SM_AUTO(sm_buffer) plaintext = sm_empty_buffer;
+  SM_AUTO(sm_buffer) ciphertext = sm_empty_buffer;
+  SM_AUTO(sm_buffer) label = sm_empty_buffer;
+
+  // Use a large label here.
+  sm_buffer_resize(&label, 1024);
+  sm_buffer_fill_rand(label, sm_buffer_begin(label), sm_buffer_end(label));
+
+  // This is too big, but use it to ensure we get the error we expect.
+  sm_buffer_resize(&plaintext, 1234);
+  sm_buffer_fill_rand(plaintext, sm_buffer_begin(plaintext),
+                      sm_buffer_end(plaintext));
+
+  SM_INFO("Expected error: ");
+  SM_ASSERT(!sm_rsa_encrypt(&pub, plaintext, label, &ciphertext));
+
+  // Now resize it to the correct size.
+  sm_buffer_resize(&plaintext, 32);
+  SM_ASSERT(sm_rsa_encrypt(&pub, plaintext, label, &ciphertext));
+
+  // Check that it wasn't a no-op.
+  SM_ASSERT(!sm_buffer_equal(plaintext, ciphertext));
+
+  // And ensure it decrypts properly.
+  SM_ASSERT(sm_rsa_decrypt(&priv, &ciphertext, label));
+
+  // Ensure they're exactly equal.
+  SM_ASSERT(sm_buffer_equal(plaintext, ciphertext));
+}
+
+void ec_keyx(void) {
+  SM_AUTO(br_ec_private_key) priv_me;
+  SM_AUTO(br_ec_public_key) pub_me;
+  sm_create_ec_keypair(SM_P256, &priv_me, &pub_me);
+
+  SM_AUTO(br_ec_private_key) priv_peer;
+  SM_AUTO(br_ec_public_key) pub_peer;
+  sm_create_ec_keypair(SM_P256, &priv_peer, &pub_peer);
+
+  // Generate the shared secret using my private key and my peer's public key.
+  SM_AUTO(sm_buffer) me_peer_secret = sm_empty_buffer;
+  SM_ASSERT(sm_ec_keyx(&priv_me, &pub_peer, &me_peer_secret));
+
+  // Generate the (hopefully) same shared secret using my peer's private key and
+  // my public key.
+  SM_AUTO(sm_buffer) peer_me_secret = sm_empty_buffer;
+  SM_ASSERT(sm_ec_keyx(&priv_peer, &pub_me, &peer_me_secret));
+
+  // Assert that the two secrets are the same.
+  SM_ASSERT(sm_buffer_equal(me_peer_secret, peer_me_secret));
+}
+
+void asymmetric_ec(void) {
+  SM_AUTO(sm_asymmetric_private_key) priv_me;
+  SM_AUTO(sm_asymmetric_public_key) pub_me;
+  sm_create_asymmetric_keypair(SM_P256, &priv_me, &pub_me);
+
+  SM_AUTO(sm_asymmetric_private_key) priv_peer;
+  SM_AUTO(sm_asymmetric_public_key) pub_peer;
+  sm_create_asymmetric_keypair(SM_P256, &priv_peer, &pub_peer);
+
+  SM_AUTO(sm_buffer) plaintext = sm_empty_buffer;
+  SM_AUTO(sm_buffer) ciphertext = sm_empty_buffer;
+  SM_AUTO(sm_buffer) aad = sm_empty_buffer;
+
+  sm_buffer_resize(&plaintext, 2956);
+  sm_buffer_fill_rand(plaintext, sm_buffer_begin(plaintext),
+                      sm_buffer_end(plaintext));
+
+  // Put some data into the AAD that we can check on decrypt.
+  sm_buffer_resize(&aad, 1234);
+  sm_buffer_fill_rand(aad, sm_buffer_begin(aad), sm_buffer_end(aad));
+  SM_AUTO(sm_buffer) cloned_aad = sm_buffer_clone(aad);
+
+  SM_ASSERT(
+      sm_asymmetric_encrypt(&priv_me, &pub_peer, plaintext, &ciphertext, &aad));
+
+  // Ensure it wasn't a no-op.
+  SM_ASSERT(!sm_buffer_equal(plaintext, ciphertext));
+
+  SM_AUTO(sm_buffer) decrypted = sm_empty_buffer;
+  SM_ASSERT(
+      sm_asymmetric_decrypt(&priv_peer, &pub_me, ciphertext, &aad, &decrypted));
+
+  // Ensure the AAD is exactly what we put in.
+  SM_ASSERT(sm_buffer_equal(cloned_aad, aad));
+  // And ensure the data decrypted properly.
+  SM_ASSERT(sm_buffer_equal(decrypted, plaintext));
+}
+
+void asymmetric_rsa(void) {
+  SM_AUTO(sm_asymmetric_private_key) priv_me;
+  SM_AUTO(sm_asymmetric_public_key) pub_me;
+  sm_create_asymmetric_keypair(2048, &priv_me, &pub_me);
+
+  SM_AUTO(sm_asymmetric_private_key) priv_peer;
+  SM_AUTO(sm_asymmetric_public_key) pub_peer;
+  sm_create_asymmetric_keypair(2048, &priv_peer, &pub_peer);
+
+  SM_AUTO(sm_buffer) plaintext = sm_empty_buffer;
+  SM_AUTO(sm_buffer) ciphertext = sm_empty_buffer;
+  SM_AUTO(sm_buffer) aad = sm_empty_buffer;
+
+  sm_buffer_resize(&plaintext, 2956);
+  sm_buffer_fill_rand(plaintext, sm_buffer_begin(plaintext),
+                      sm_buffer_end(plaintext));
+
+  // Put some data into the AAD that we can check on decrypt.
+  sm_buffer_resize(&aad, 1234);
+  sm_buffer_fill_rand(aad, sm_buffer_begin(aad), sm_buffer_end(aad));
+  SM_AUTO(sm_buffer) cloned_aad = sm_buffer_clone(aad);
+
+  SM_ASSERT(
+      sm_asymmetric_encrypt(&priv_me, &pub_peer, plaintext, &ciphertext, &aad));
+
+  // Ensure it wasn't a no-op.
+  SM_ASSERT(!sm_buffer_equal(plaintext, ciphertext));
+
+  SM_AUTO(sm_buffer) decrypted = sm_empty_buffer;
+  SM_ASSERT(
+      sm_asymmetric_decrypt(&priv_peer, &pub_me, ciphertext, &aad, &decrypted));
+
+  // Ensure the AAD is exactly what we put in.
+  SM_ASSERT(sm_buffer_equal(cloned_aad, aad));
+  // And ensure the data decrypted properly.
+  SM_ASSERT(sm_buffer_equal(decrypted, plaintext));
+}
+
+int main(void) {
   ec();
   rsa();
 
@@ -198,4 +363,12 @@ int main() {
 
   ec_csr();
   rsa_csr();
+
+  rsa_crypt_nolabel();
+  rsa_crypt_withlabel();
+
+  ec_keyx();
+
+  asymmetric_ec();
+  asymmetric_rsa();
 }

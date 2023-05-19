@@ -67,9 +67,6 @@ streaming).
 
 Turn off with `-DSM_BUILD_CRYPTO=OFF`.
 
-- TODO: add rsa encrypt/decrypt
-- TODO: evaluate necessity of allowing the user to set an initial counter value
-
 Requires `stdlib` module.
 
 ## `json`
